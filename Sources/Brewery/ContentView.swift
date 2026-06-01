@@ -4,11 +4,13 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var store: PackageStore
+    @StateObject private var catalogStore = CatalogStore()
     @AppStorage("packageDetailPaneWidth") private var detailPaneWidth = 420.0
     @State private var pendingAction: BrewAction?
     @State private var installName = ""
     @State private var installKind: PackageKind = .formula
     @State private var showingInstallSheet = false
+    @State private var selectedCatalogPackage: CatalogPackage?
 
     private let minimumDetailPaneWidth = 380.0
     private let maximumDetailPaneWidth = 640.0
@@ -23,6 +25,10 @@ struct ContentView: View {
         }
         .task {
             await store.refresh()
+            await catalogStore.load(installedPackages: store.packages)
+        }
+        .onChange(of: store.packages) { packages in
+            catalogStore.mergeInstalledState(packages)
         }
         .sheet(item: $pendingAction) { action in
             ConfirmationSheet(action: action) {
@@ -59,10 +65,20 @@ struct ContentView: View {
                         DetailPaneResizeHandle()
                             .gesture(detailPaneResizeGesture(containerFrame: geometry.frame(in: .global)))
 
-                        PackageDetailView(package: store.selectedPackage) { node in
-                            store.selectPackage(node)
-                        } onAction: { action in
-                            pendingAction = action
+                        Group {
+                            if store.filter == .browse {
+                                CatalogPackageDetailView(package: selectedCatalogPackage) { action in
+                                    pendingAction = action
+                                } onSelectInstalled: { node in
+                                    store.selectPackage(node)
+                                }
+                            } else {
+                                PackageDetailView(package: store.selectedPackage) { node in
+                                    store.selectPackage(node)
+                                } onAction: { action in
+                                    pendingAction = action
+                                }
+                            }
                         }
                         .frame(width: clampedDetailPaneWidth)
                     }
@@ -83,6 +99,7 @@ struct ContentView: View {
                     Label("Refresh", systemImage: "arrow.clockwise")
                 }
                 .disabled(store.isRunningCommand)
+                .help("Refresh installed packages and status")
 
                 Button {
                     pendingAction = .update
@@ -90,6 +107,7 @@ struct ContentView: View {
                     Label("Update", systemImage: "arrow.down.circle")
                 }
                 .disabled(store.isRunningCommand)
+                .help("Run brew update")
 
                 Button {
                     showingInstallSheet = true
@@ -97,6 +115,7 @@ struct ContentView: View {
                     Label("Install", systemImage: "plus.circle")
                 }
                 .disabled(store.isRunningCommand)
+                .help("Install a formula or cask")
 
                 Button {
                     pendingAction = .cleanup
@@ -104,6 +123,7 @@ struct ContentView: View {
                     Label("Cleanup", systemImage: "sparkles")
                 }
                 .disabled(store.isRunningCommand)
+                .help("Run brew cleanup")
             }
         }
         .onAppear {
@@ -113,32 +133,43 @@ struct ContentView: View {
 
     private var contentPane: some View {
         VStack(spacing: 0) {
-            HStack {
-                TextField("Search packages", text: $store.searchText)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 320)
-
-                Spacer()
-
-                if store.isRunningCommand {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-
-                Text(store.statusMessage)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+            if store.filter != .browse {
+                packageSearchHeader
+                Divider()
             }
-            .padding(12)
 
-            Divider()
-
-            if store.filter == .diagnostics {
+            if store.filter == .browse {
+                BrowseView(catalogStore: catalogStore, installedPackages: store.packages, selectedPackage: $selectedCatalogPackage) { action in
+                    pendingAction = action
+                } onSelectInstalled: { node in
+                    store.selectPackage(node)
+                }
+            } else if store.filter == .diagnostics {
                 DiagnosticsView()
             } else {
                 PackageTableView()
             }
         }
+    }
+
+    private var packageSearchHeader: some View {
+        HStack {
+            TextField("Search packages", text: $store.searchText)
+                .textFieldStyle(.roundedBorder)
+                .frame(maxWidth: 320)
+
+            Spacer()
+
+            if store.isRunningCommand {
+                ProgressView()
+                    .controlSize(.small)
+            }
+
+            Text(store.statusMessage)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+        }
+        .padding(12)
     }
 
     private func detailPaneResizeGesture(containerFrame: CGRect) -> some Gesture {

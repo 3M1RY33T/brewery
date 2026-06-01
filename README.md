@@ -40,6 +40,8 @@ swift test
 - Show basic diagnostics from `brew --version`, `brew config`, and `brew doctor`.
 - Build an in-memory dependency graph from Homebrew JSON instead of running per-package dependency commands.
 - Show direct dependencies and dependents in the package detail pane.
+- Browse official Homebrew formulae and casks with an App Store-style catalog view.
+- Cache the browse catalog locally and use cached data when network refresh fails.
 - Provide sidebar filters for all packages, formulae, casks, outdated packages, pinned packages, and diagnostics.
 - Keep the package detail pane at a stable width with a manual resize handle.
 

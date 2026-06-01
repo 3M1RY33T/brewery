@@ -82,6 +82,123 @@ final class BreweryCoreTests: XCTestCase {
         XCTAssertEqual(graph.recursiveDependents(of: a), [b, c])
     }
 
+    func testDecodesCatalogFixtures() throws {
+        let formulae = try CatalogPackageMapper.formulaPackages(from: fixture("catalog-formula"))
+        let casks = try CatalogPackageMapper.caskPackages(from: fixture("catalog-cask"))
+
+        let wget = try XCTUnwrap(formulae.first { $0.name == "wget" })
+        XCTAssertEqual(wget.kind, .formula)
+        XCTAssertEqual(wget.version, "1.25.0")
+        XCTAssertEqual(wget.dependencies, ["openssl@3"])
+
+        let code = try XCTUnwrap(casks.first { $0.name == "visual-studio-code" })
+        XCTAssertEqual(code.kind, .cask)
+        XCTAssertEqual(code.displayName, "Visual Studio Code")
+        XCTAssertEqual(code.dependencies, ["mono-mdk"])
+    }
+
+    func testCatalogSearchRankingAndFilters() throws {
+        let packages = try CatalogPackageMapper.formulaPackages(from: fixture("catalog-formula"))
+            + CatalogPackageMapper.caskPackages(from: fixture("catalog-cask"))
+
+        let searchResults = CatalogSearch.filter(
+            packages,
+            searchText: "wget",
+            kindFilter: .all,
+            category: .featured
+        )
+
+        XCTAssertEqual(searchResults.first?.name, "wget")
+
+        let caskResults = CatalogSearch.filter(
+            packages,
+            searchText: "",
+            kindFilter: .casks,
+            category: .guiApps
+        )
+
+        XCTAssertTrue(caskResults.allSatisfy { $0.kind == .cask })
+        XCTAssertTrue(caskResults.contains { $0.name == "visual-studio-code" })
+    }
+
+    @MainActor
+    func testCatalogCategoriesFollowKindFilter() {
+        XCTAssertFalse(CatalogCategory.available(for: .formulae).contains(.guiApps))
+        XCTAssertFalse(CatalogCategory.available(for: .casks).contains(.cliTools))
+        XCTAssertFalse(CatalogCategory.available(for: .casks).contains(.libraries))
+        XCTAssertTrue(CatalogCategory.available(for: .casks).contains(.utilities))
+        XCTAssertTrue(CatalogCategory.available(for: .formulae).contains(.utilities))
+        XCTAssertTrue(CatalogCategory.available(for: .all).contains(.guiApps))
+        XCTAssertTrue(CatalogCategory.available(for: .all).contains(.cliTools))
+
+        let store = CatalogStore()
+        store.category = .guiApps
+        store.kindFilter = .formulae
+
+        XCTAssertEqual(store.category, .featured)
+    }
+
+    func testCatalogPackagesHaveAtLeastOneNonFeaturedCategoryForTheirKind() throws {
+        let packages = try CatalogPackageMapper.formulaPackages(from: fixture("catalog-formula"))
+            + CatalogPackageMapper.caskPackages(from: fixture("catalog-cask"))
+
+        for package in packages {
+            let filter: CatalogKindFilter = package.kind == .cask ? .casks : .formulae
+            let categories = CatalogCategory.available(for: filter)
+                .filter { $0 != .featured }
+                .filter { package.categoryScore(for: $0) > 0 }
+
+            XCTAssertFalse(categories.isEmpty, "\(package.name) has no non-featured category")
+        }
+    }
+
+    func testCatalogMergeMarksInstalledAndOutdatedPackages() throws {
+        let packages = try CatalogPackageMapper.formulaPackages(from: fixture("catalog-formula"))
+            + CatalogPackageMapper.caskPackages(from: fixture("catalog-cask"))
+        let installed = [
+            BrewPackage(name: "wget", kind: .formula, outdated: true),
+            BrewPackage(name: "visual-studio-code", kind: .cask)
+        ]
+
+        let merged = CatalogSearch.merge(packages, installedPackages: installed)
+
+        XCTAssertEqual(merged.first { $0.name == "wget" }?.installStatus, .installed(outdated: true))
+        XCTAssertEqual(merged.first { $0.name == "visual-studio-code" }?.installStatus, .installed(outdated: false))
+        XCTAssertEqual(merged.first { $0.name == "ripgrep" }?.installStatus, .notInstalled)
+    }
+
+    @MainActor
+    func testCatalogStoreFallsBackToCachedCatalogWhenRefreshFails() async throws {
+        let cacheURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("brewery-catalog-test-\(UUID().uuidString).json")
+        let formulaURL = URL(string: "https://example.test/formula.json")!
+        let caskURL = URL(string: "https://example.test/cask.json")!
+        let successStore = CatalogStore(
+            fetcher: MockCatalogFetcher(payloads: [
+                formulaURL: try fixture("catalog-formula"),
+                caskURL: try fixture("catalog-cask")
+            ]),
+            cacheURL: cacheURL,
+            formulaURL: formulaURL,
+            caskURL: caskURL
+        )
+
+        await successStore.load(installedPackages: [], forceRefresh: true)
+        XCTAssertFalse(successStore.packages.isEmpty)
+
+        let failingStore = CatalogStore(
+            fetcher: MockCatalogFetcher(error: CatalogError.httpStatus(500)),
+            cacheURL: cacheURL,
+            formulaURL: formulaURL,
+            caskURL: caskURL
+        )
+
+        await failingStore.load(installedPackages: [], forceRefresh: true)
+
+        XCTAssertEqual(failingStore.statusMessage, "Using cached catalog")
+        XCTAssertEqual(failingStore.packages.count, successStore.packages.count)
+    }
+
     func testBrewDetectorFindsAppleSiliconPath() {
         let detector = BrewDetector(
             fileManager: StubFileManager(executablePaths: ["/opt/homebrew/bin/brew"]),
@@ -156,5 +273,17 @@ private final class StubFileManager: FileManager {
 
     override func isExecutableFile(atPath path: String) -> Bool {
         executablePaths.contains(path)
+    }
+}
+
+private struct MockCatalogFetcher: CatalogFetching {
+    var payloads: [URL: Data] = [:]
+    var error: Error?
+
+    func data(from url: URL) async throws -> Data {
+        if let error {
+            throw error
+        }
+        return try XCTUnwrap(payloads[url])
     }
 }

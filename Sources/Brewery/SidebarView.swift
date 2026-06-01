@@ -24,6 +24,7 @@ struct SidebarView: View {
 
     private func icon(for filter: PackageFilter) -> String {
         switch filter {
+        case .browse: return "square.grid.2x2"
         case .all: return "shippingbox"
         case .formulae: return "terminal"
         case .casks: return "macwindow"

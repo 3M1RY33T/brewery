@@ -23,6 +23,8 @@ public final class PackageStore: ObservableObject {
         packages.filter { package in
             let matchesFilter: Bool
             switch filter {
+            case .browse:
+                matchesFilter = false
             case .all:
                 matchesFilter = true
             case .formulae:

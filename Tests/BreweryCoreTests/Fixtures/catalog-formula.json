@@ -1,0 +1,26 @@
+[
+  {
+    "name": "wget",
+    "full_name": "wget",
+    "tap": "homebrew/core",
+    "desc": "Internet file retriever",
+    "homepage": "https://www.gnu.org/software/wget/",
+    "versions": {
+      "stable": "1.25.0"
+    },
+    "dependencies": [
+      "openssl@3"
+    ]
+  },
+  {
+    "name": "ripgrep",
+    "full_name": "ripgrep",
+    "tap": "homebrew/core",
+    "desc": "Search tool like grep and The Silver Searcher",
+    "homepage": "https://github.com/BurntSushi/ripgrep",
+    "versions": {
+      "stable": "14.1.1"
+    },
+    "dependencies": []
+  }
+]

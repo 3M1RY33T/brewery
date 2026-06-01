@@ -1,0 +1,33 @@
+[
+  {
+    "token": "visual-studio-code",
+    "full_token": "visual-studio-code",
+    "tap": "homebrew/cask",
+    "name": [
+      "Visual Studio Code"
+    ],
+    "desc": "Open-source code editor",
+    "homepage": "https://code.visualstudio.com/",
+    "version": "1.100.0",
+    "depends_on": {
+      "macos": {},
+      "cask": [
+        "mono-mdk"
+      ]
+    }
+  },
+  {
+    "token": "vlc",
+    "full_token": "vlc",
+    "tap": "homebrew/cask",
+    "name": [
+      "VLC media player"
+    ],
+    "desc": "Multimedia player",
+    "homepage": "https://www.videolan.org/vlc/",
+    "version": "3.0.23",
+    "depends_on": {
+      "macos": {}
+    }
+  }
+]
