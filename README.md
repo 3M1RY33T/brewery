@@ -1,14 +1,29 @@
-# Brewery
+
+<div align="center">
+  <img src="Sources/Brewery/Resources/brewery-logo.png" alt="Brewery app icon" width="160" height="160">
+  <h1 style="padding:20px;">Brewery</h1>
+</div>
 
 Brewery is a native SwiftUI macOS client for managing local Homebrew formulae and casks. It detects an existing Homebrew installation, loads installed packages, shows outdated status, displays dependency/dependent relationships, and runs package actions only after confirmation.
+
+![Brewery Browse view](Docs/Screenshots/brewery-browse.png)
 
 ## Requirements
 
 - macOS 12 or newer
-- Swift 5.9 or newer
 - Homebrew installed at `/opt/homebrew/bin/brew`, `/usr/local/bin/brew`, or discoverable from a sanitized login shell `PATH`
 
-## Run
+Swift 5.9 or newer is only needed when building from source.
+
+## Install
+
+Download the latest Brewery release from [GitHub Releases](https://github.com/3M1RY33T/brewery/releases), unzip the app if needed, and move `Brewery.app` to your `Applications` folder.
+
+Brewery is distributed as a source-built macOS app for now. If macOS warns that the app cannot be opened because it was downloaded from the internet, open it from Finder with Control-click > Open.
+
+### Manual Build
+
+Clone the repository, then build and open the local app bundle:
 
 ```sh
 Scripts/run-app.sh
@@ -43,15 +58,21 @@ swift test
 - Browse official Homebrew formulae and casks with an App Store-style catalog view.
 - Cache the browse catalog locally and use cached data when network refresh fails.
 - Provide sidebar filters for all packages, formulae, casks, outdated packages, pinned packages, and diagnostics.
-- Keep the package detail pane at a stable width with a manual resize handle.
 
-## Project Layout
+## Credits
 
-- `Sources/BreweryCore`: Homebrew detection, command execution, JSON decoding, package state, and dependency graph logic.
-- `Sources/Brewery`: SwiftUI macOS app views and local resources.
-- `Tests/BreweryCoreTests`: fixtures and unit tests for decoding, command construction, graph traversal, and package filtering.
-- `Scripts`: local build and launch helpers for the source-only app bundle.
+Brewery is an independent open-source project and is not affiliated with Homebrew or Apple.
+
+Brewery uses Homebrew’s command-line interface and official JSON API for package metadata. Homebrew is maintained by the Homebrew project and contributors: https://brew.sh/
+
+Built with SwiftUI.
 
 ## Notes
 
 Brewery does not install Homebrew automatically.
+
+### [Install Homebrew on MacOS:](https://brew.sh/)
+
+```bash
+$ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
