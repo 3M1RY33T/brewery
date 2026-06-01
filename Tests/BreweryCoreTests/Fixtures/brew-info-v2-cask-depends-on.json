@@ -1,0 +1,39 @@
+{
+  "formulae": [],
+  "casks": [
+    {
+      "token": "wine-stable",
+      "full_token": "wine-stable",
+      "tap": "homebrew/cask",
+      "name": [
+        "WineHQ-stable"
+      ],
+      "desc": "Compatibility layer to run Windows applications",
+      "homepage": "https://wiki.winehq.org/MacOS",
+      "version": "11.0_1",
+      "installed": "11.0_1",
+      "installed_time": 1780263763,
+      "pinned": false,
+      "outdated": false,
+      "caveats": null,
+      "caveats_rosetta": true,
+      "depends_on": {
+        "macos": {},
+        "cask": [
+          "gstreamer-runtime"
+        ],
+        "ignored_future_shape": [
+          {
+            "nested": "metadata"
+          }
+        ]
+      },
+      "conflicts_with": {
+        "cask": [
+          "wine@devel",
+          "wine@staging"
+        ]
+      }
+    }
+  ]
+}

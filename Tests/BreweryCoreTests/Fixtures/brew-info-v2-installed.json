@@ -1,0 +1,59 @@
+{
+  "formulae": [
+    {
+      "name": "wget",
+      "full_name": "wget",
+      "tap": "homebrew/core",
+      "desc": "Internet file retriever",
+      "homepage": "https://www.gnu.org/software/wget/",
+      "versions": {
+        "stable": "1.25.0"
+      },
+      "installed": [
+        {
+          "version": "1.24.5",
+          "installed_as_dependency": false,
+          "installed_on_request": true,
+          "runtime_dependencies": [
+            {
+              "full_name": "openssl@3",
+              "version": "3.6.2",
+              "declared_directly": true
+            },
+            {
+              "full_name": "ca-certificates",
+              "version": "2026-05-14",
+              "declared_directly": false
+            }
+          ]
+        }
+      ],
+      "linked_keg": "1.24.5",
+      "pinned": false,
+      "outdated": false,
+      "dependencies": [
+        "openssl@3"
+      ],
+      "extra_future_field": "ignored"
+    }
+  ],
+  "casks": [
+    {
+      "token": "visual-studio-code",
+      "full_token": "visual-studio-code",
+      "tap": "homebrew/cask",
+      "name": [
+        "Visual Studio Code"
+      ],
+      "desc": "Open-source code editor",
+      "homepage": "https://code.visualstudio.com/",
+      "version": "1.100.0",
+      "installed": "1.100.0",
+      "pinned": false,
+      "outdated": false
+    }
+  ],
+  "ignored": {
+    "note": "unknown top-level keys are ignored"
+  }
+}

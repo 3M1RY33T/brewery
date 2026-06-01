@@ -1,0 +1,13 @@
+{
+  "formulae": [
+    {
+      "name": "wget",
+      "installed_versions": [
+        "1.24.5"
+      ],
+      "current_version": "1.25.0",
+      "pinned": true
+    }
+  ],
+  "casks": []
+}
