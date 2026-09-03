@@ -3,3 +3,5 @@
 DerivedData/
 *.xcuserstate
 xcuserdata/
+# graphify build output, never committed
+graphify-out/
