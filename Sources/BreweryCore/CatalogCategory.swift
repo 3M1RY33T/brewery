@@ -58,6 +58,34 @@ public enum CatalogCategory: String, CaseIterable, Identifiable {
         }
     }
 
+    /// How a shelf presents its casks.
+    ///
+    /// Deliberately varied, and alternated so no two adjacent shelves look
+    /// the same: a page of identical rows reads as a database dump, not a
+    /// storefront.
+    public var shelfStyle: CatalogShelfStyle {
+        switch self {
+        case .featured:
+            return .showcase
+        // Browsing these is about discovering one thing worth having, so the
+        // leading item gets the room to make its case.
+        case .ai, .media, .productivity:
+            return .spotlight
+        // Dense categories: many small things, scanned rather than read.
+        case .fonts, .utilities, .libraries, .data:
+            return .compactGrid
+        case .developerTools, .terminal, .security, .networking, .design, .communication:
+            return .showcase
+        }
+    }
+
+    /// A stable hue for tiles and hero gradients. Spread around the wheel so
+    /// neighbouring categories stay visually distinct.
+    public var tintHue: Double {
+        guard let index = CatalogCategory.allCases.firstIndex(of: self) else { return 0.58 }
+        return (Double(index) / Double(CatalogCategory.allCases.count)).truncatingRemainder(dividingBy: 1)
+    }
+
     /// Categories a package can be assigned to, in priority order. `featured`
     /// is excluded: it is a ranking, not a subject, and `utilities` is the
     /// fallback for packages nothing else claims.
@@ -149,4 +177,15 @@ public enum CatalogCategory: String, CaseIterable, Identifiable {
         let phraseHits = phrases.reduce(0) { $0 + (text.contains($1) ? 1 : 0) }
         return wordHits + phraseHits
     }
+}
+
+
+/// The presentation a shelf uses for its casks.
+public enum CatalogShelfStyle: Equatable {
+    /// Large cards in a horizontal row.
+    case showcase
+    /// Three rows of compact cells, scrolling sideways. For dense shelves.
+    case compactGrid
+    /// One large card carrying the shelf, with the rest listed beside it.
+    case spotlight
 }

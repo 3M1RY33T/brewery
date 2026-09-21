@@ -29,7 +29,7 @@ struct BrowseView: View {
                         if catalogStore.isSearching {
                             searchResults
                         } else {
-                            shelves
+                            shelves(proxy: proxy)
                         }
                     }
                 }
@@ -87,7 +87,7 @@ struct BrowseView: View {
     private func categoryStrip(proxy: ScrollViewProxy) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(catalogStore.sections) { section in
+                ForEach(catalogStore.sections.filter { $0.category != .featured }) { section in
                     Button {
                         withAnimation {
                             proxy.scrollTo(section.id, anchor: .top)
@@ -110,9 +110,42 @@ struct BrowseView: View {
 
     // MARK: - Shelves
 
-    private var shelves: some View {
-        LazyVStack(alignment: .leading, spacing: 30) {
-            ForEach(catalogStore.sections) { section in
+    @ViewBuilder
+    private func shelves(proxy: ScrollViewProxy) -> some View {
+        let featured = catalogStore.sections.first { $0.category == .featured }
+        let subjects = catalogStore.sections.filter { $0.category != .featured }
+
+        LazyVStack(alignment: .leading, spacing: 34) {
+            if let featured, !featured.casks.isEmpty {
+                // Hero cards bleed to the window edge, so they manage their
+                // own horizontal padding rather than inheriting the page's.
+                HeroCarousel(
+                    packages: Array(featured.casks.prefix(6)),
+                    selectedPackage: $selectedPackage,
+                    action: handlePrimaryAction
+                )
+                .padding(.top, 16)
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                ShelfHeader(title: "Categories", systemImage: "square.grid.2x2")
+                CategoryTileGrid(sections: subjects) { id in
+                    withAnimation { proxy.scrollTo(id, anchor: .top) }
+                }
+            }
+            .padding(.horizontal, 16)
+
+            if let featured {
+                TopChartsShelf(
+                    casks: Array(featured.casks.prefix(10)),
+                    formulae: Array(featured.formulae.prefix(10)),
+                    selectedPackage: $selectedPackage,
+                    action: handlePrimaryAction
+                )
+                .padding(.horizontal, 16)
+            }
+
+            ForEach(subjects) { section in
                 CatalogShelf(
                     section: section,
                     selectedPackage: $selectedPackage,
@@ -121,7 +154,7 @@ struct BrowseView: View {
                 .id(section.id)
             }
         }
-        .padding(16)
+        .padding(.bottom, 24)
     }
 
     @ViewBuilder
@@ -158,9 +191,10 @@ struct BrowseView: View {
                         selectedPackage: $selectedPackage,
                         action: handlePrimaryAction
                     )
+                    .padding(.horizontal, 16)
                 }
             }
-            .padding(16)
+            .padding(.vertical, 16)
         }
     }
 
@@ -207,27 +241,73 @@ private struct CatalogShelf: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label(section.category.title, systemImage: section.category.systemImage)
-                .font(.title2.weight(.semibold))
+            ShelfHeader(
+                title: section.category.title,
+                systemImage: section.category.systemImage,
+                subtitle: subtitle
+            )
+            .padding(.horizontal, 16)
 
-            if !section.casks.isEmpty {
+            casks
+
+            if !section.formulae.isEmpty {
+                FormulaShelfList(
+                    title: "\(section.category.title) Formulae",
+                    packages: section.formulae,
+                    total: section.formulaTotal,
+                    columns: section.category.shelfStyle == .compactGrid ? 2 : 1,
+                    selectedPackage: $selectedPackage,
+                    action: action
+                )
+                .padding(.horizontal, 16)
+            }
+        }
+    }
+
+    private var subtitle: String? {
+        let total = section.caskTotal + section.formulaTotal
+        guard total > 0 else { return nil }
+        return "\(total.formatted()) packages"
+    }
+
+    /// Each style exists because the shelf underneath it is shaped
+    /// differently: a handful worth showing off, a spotlight worth leading
+    /// with, or hundreds worth scanning.
+    @ViewBuilder
+    private var casks: some View {
+        if section.casks.isEmpty {
+            EmptyView()
+        } else {
+            switch section.category.shelfStyle {
+            case .showcase:
                 CaskShelfRow(
-                    title: "Casks",
+                    title: "\(section.category.title) Casks",
                     packages: section.casks,
                     total: section.caskTotal,
                     selectedPackage: $selectedPackage,
                     action: action
                 )
-            }
-
-            if !section.formulae.isEmpty {
-                FormulaShelfList(
-                    title: "Formulae",
-                    packages: section.formulae,
-                    total: section.formulaTotal,
-                    selectedPackage: $selectedPackage,
-                    action: action
-                )
+            case .compactGrid:
+                VStack(alignment: .leading, spacing: 8) {
+                    ShelfSubheading(title: "\(section.category.title) Casks", shown: section.casks.count, total: section.caskTotal)
+                        .padding(.horizontal, 16)
+                    CompactIconGrid(
+                        packages: section.casks,
+                        selectedPackage: $selectedPackage,
+                        action: action
+                    )
+                }
+            case .spotlight:
+                VStack(alignment: .leading, spacing: 8) {
+                    ShelfSubheading(title: "\(section.category.title) Casks", shown: section.casks.count, total: section.caskTotal)
+                    SpotlightShelf(
+                        packages: section.casks,
+                        tintHue: section.category.tintHue,
+                        selectedPackage: $selectedPackage,
+                        action: action
+                    )
+                }
+                .padding(.horizontal, 16)
             }
         }
     }
@@ -244,6 +324,7 @@ private struct CaskShelfRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ShelfSubheading(title: title, shown: packages.count, total: total)
+                .padding(.horizontal, 16)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 12) {
@@ -258,6 +339,7 @@ private struct CaskShelfRow: View {
                     }
                 }
                 .padding(.vertical, 2)
+                .padding(.horizontal, 16)
             }
         }
     }
@@ -269,28 +351,43 @@ private struct FormulaShelfList: View {
     let title: String
     let packages: [CatalogPackage]
     let total: Int
+    var columns = 1
     @Binding var selectedPackage: CatalogPackage?
     let action: (CatalogPackage) -> Void
+
+    private var split: [[CatalogPackage]] {
+        guard columns > 1 else { return [packages] }
+        let perColumn = Int((Double(packages.count) / Double(columns)).rounded(.up))
+        guard perColumn > 0 else { return [packages] }
+        return stride(from: 0, to: packages.count, by: perColumn).map {
+            Array(packages[$0..<min($0 + perColumn, packages.count)])
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ShelfSubheading(title: title, shown: packages.count, total: total)
 
-            VStack(spacing: 0) {
-                ForEach(Array(packages.enumerated()), id: \.element.id) { index, package in
-                    if index > 0 {
-                        Divider()
+            HStack(alignment: .top, spacing: 12) {
+                ForEach(Array(split.enumerated()), id: \.offset) { _, column in
+                    VStack(spacing: 0) {
+                        ForEach(Array(column.enumerated()), id: \.element.id) { index, package in
+                            if index > 0 {
+                                Divider()
+                            }
+                            FormulaRow(
+                                package: package,
+                                isSelected: selectedPackage?.id == package.id,
+                                open: { selectedPackage = package },
+                                action: { action(package) }
+                            )
+                        }
                     }
-                    FormulaRow(
-                        package: package,
-                        isSelected: selectedPackage?.id == package.id,
-                        open: { selectedPackage = package },
-                        action: { action(package) }
-                    )
+                    .frame(maxWidth: .infinity)
+                    .background(Color(nsColor: .textBackgroundColor))
+                    .cornerRadius(8)
                 }
             }
-            .background(Color(nsColor: .textBackgroundColor))
-            .cornerRadius(8)
         }
     }
 }
