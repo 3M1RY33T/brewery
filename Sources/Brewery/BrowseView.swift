@@ -1,6 +1,12 @@
 import BreweryCore
 import SwiftUI
 
+/// The catalog, presented as shelves.
+///
+/// Everything is shown at once rather than filtered by kind: each category is
+/// a shelf, casks ride a horizontal row of cards because they are apps with
+/// icons, and formulae sit in a list underneath because they are command line
+/// tools whose name and description are the whole story.
 struct BrowseView: View {
     @ObservedObject var catalogStore: CatalogStore
     let installedPackages: [BrewPackage]
@@ -8,103 +14,157 @@ struct BrowseView: View {
     let onAction: (BrewAction) -> Void
     let onSelectInstalled: (PackageNodeID) -> Void
 
-    private let columns = [
-        GridItem(.adaptive(minimum: 230, maximum: 320), spacing: 14, alignment: .top)
-    ]
-
     var body: some View {
         VStack(spacing: 0) {
             header
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    categoryStrip
+            ScrollViewReader { proxy in
+                VStack(spacing: 0) {
+                    if !catalogStore.isSearching {
+                        categoryStrip(proxy: proxy)
+                        Divider()
+                    }
 
-                    LazyVGrid(columns: columns, spacing: 14) {
-                        ForEach(catalogStore.filteredPackages.prefix(500)) { package in
-                            CatalogCard(package: package) {
-                                selectedPackage = package
-                            } action: {
-                                handlePrimaryAction(for: package)
-                            }
+                    ScrollView {
+                        if catalogStore.isSearching {
+                            searchResults
+                        } else {
+                            shelves
                         }
                     }
                 }
-                .padding(16)
             }
         }
-        .onChange(of: catalogStore.filteredPackages) { packages in
-            guard let selectedPackage else {
-                self.selectedPackage = packages.first
-                return
-            }
-
-            if let refreshedSelection = packages.first(where: { $0.id == selectedPackage.id }) {
-                self.selectedPackage = refreshedSelection
-            } else {
-                self.selectedPackage = packages.first
-            }
+        .onChange(of: catalogStore.sections) { _ in
+            selectDefaultPackageIfNeeded()
+        }
+        .onChange(of: catalogStore.searchText) { _ in
+            selectDefaultPackageIfNeeded()
         }
     }
 
+    // MARK: - Chrome
+
     private var header: some View {
-        VStack(spacing: 12) {
-            HStack {
-                TextField("Search Homebrew", text: $catalogStore.searchText)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 360)
+        HStack {
+            TextField("Search Homebrew", text: $catalogStore.searchText)
+                .textFieldStyle(.roundedBorder)
+                .frame(maxWidth: 360)
 
-                Picker("Type", selection: $catalogStore.kindFilter) {
-                    ForEach(CatalogKindFilter.allCases) { filter in
-                        Text(filter.title).tag(filter)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 260)
-
-                Spacer()
-
-                if catalogStore.isLoading {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-
-                Text(catalogStore.statusMessage)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-
+            if catalogStore.isSearching {
                 Button {
-                    Task { await catalogStore.load(installedPackages: installedPackages, forceRefresh: true) }
+                    catalogStore.searchText = ""
                 } label: {
-                    Label("Refresh Catalog", systemImage: "arrow.clockwise")
+                    Label("Clear", systemImage: "xmark.circle.fill")
+                        .labelStyle(.iconOnly)
                 }
+                .buttonStyle(.plain)
+                .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            if catalogStore.isLoading {
+                ProgressView()
+                    .controlSize(.small)
+            }
+
+            Text(catalogStore.statusMessage)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+
+            Button {
+                Task { await catalogStore.load(installedPackages: installedPackages, forceRefresh: true) }
+            } label: {
+                Label("Refresh Catalog", systemImage: "arrow.clockwise")
             }
         }
         .padding(12)
         .background(Color(nsColor: .controlBackgroundColor))
     }
 
-    private var categoryStrip: some View {
+    /// Jump links, not filters: every shelf stays on the page.
+    private func categoryStrip(proxy: ScrollViewProxy) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(CatalogCategory.available(for: catalogStore.kindFilter)) { category in
+                ForEach(catalogStore.sections) { section in
                     Button {
-                        catalogStore.category = category
+                        withAnimation {
+                            proxy.scrollTo(section.id, anchor: .top)
+                        }
                     } label: {
-                        Label(category.title, systemImage: icon(for: category))
+                        Label(section.category.title, systemImage: section.category.systemImage)
+                            .font(.callout)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 7)
-                            .background(catalogStore.category == category ? Color.accentColor.opacity(0.18) : Color(nsColor: .controlBackgroundColor))
+                            .background(Color(nsColor: .controlBackgroundColor))
                             .cornerRadius(8)
                     }
                     .buttonStyle(.plain)
                 }
             }
-        }
-        .onChange(of: catalogStore.kindFilter) { _ in
-            catalogStore.normalizeCategory()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
         }
     }
+
+    // MARK: - Shelves
+
+    private var shelves: some View {
+        LazyVStack(alignment: .leading, spacing: 30) {
+            ForEach(catalogStore.sections) { section in
+                CatalogShelf(
+                    section: section,
+                    selectedPackage: $selectedPackage,
+                    action: handlePrimaryAction
+                )
+                .id(section.id)
+            }
+        }
+        .padding(16)
+    }
+
+    @ViewBuilder
+    private var searchResults: some View {
+        let results = catalogStore.searchResults
+
+        if results.isEmpty {
+            VStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .font(.largeTitle)
+                    .foregroundColor(.secondary)
+                Text("Nothing matches \"\(catalogStore.searchText)\"")
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 80)
+        } else {
+            LazyVStack(alignment: .leading, spacing: 30) {
+                if !results.casks.isEmpty {
+                    CaskShelfRow(
+                        title: "Casks",
+                        packages: results.casks,
+                        total: results.casks.count,
+                        selectedPackage: $selectedPackage,
+                        action: handlePrimaryAction
+                    )
+                }
+
+                if !results.formulae.isEmpty {
+                    FormulaShelfList(
+                        title: "Formulae",
+                        packages: results.formulae,
+                        total: results.formulae.count,
+                        selectedPackage: $selectedPackage,
+                        action: handlePrimaryAction
+                    )
+                }
+            }
+            .padding(16)
+        }
+    }
+
+    // MARK: - Behaviour
 
     private func handlePrimaryAction(for package: CatalogPackage) {
         switch package.installStatus {
@@ -119,69 +179,210 @@ struct BrowseView: View {
         }
     }
 
-    private func icon(for category: CatalogCategory) -> String {
-        switch category {
-        case .featured: return "sparkles"
-        case .guiApps: return "macwindow"
-        case .developerTools: return "hammer"
-        case .media: return "play.rectangle"
-        case .productivity: return "checklist"
-        case .cliTools: return "terminal"
-        case .libraries: return "books.vertical"
-        case .utilities: return "wrench.and.screwdriver"
+    /// Keeps the detail pane pointed at something that is actually on screen.
+    private func selectDefaultPackageIfNeeded() {
+        let visible: [CatalogPackage]
+        if catalogStore.isSearching {
+            let results = catalogStore.searchResults
+            visible = results.casks + results.formulae
+        } else {
+            visible = catalogStore.sections.flatMap { $0.casks + $0.formulae }
         }
+
+        guard !visible.isEmpty else { return }
+        if let selectedPackage, let refreshed = visible.first(where: { $0.id == selectedPackage.id }) {
+            self.selectedPackage = refreshed
+            return
+        }
+        selectedPackage = visible.first
+    }
+}
+
+// MARK: - Shelf
+
+private struct CatalogShelf: View {
+    let section: CatalogSection
+    @Binding var selectedPackage: CatalogPackage?
+    let action: (CatalogPackage) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label(section.category.title, systemImage: section.category.systemImage)
+                .font(.title2.weight(.semibold))
+
+            if !section.casks.isEmpty {
+                CaskShelfRow(
+                    title: "Casks",
+                    packages: section.casks,
+                    total: section.caskTotal,
+                    selectedPackage: $selectedPackage,
+                    action: action
+                )
+            }
+
+            if !section.formulae.isEmpty {
+                FormulaShelfList(
+                    title: "Formulae",
+                    packages: section.formulae,
+                    total: section.formulaTotal,
+                    selectedPackage: $selectedPackage,
+                    action: action
+                )
+            }
+        }
+    }
+}
+
+/// Casks: a single horizontal row of cards, scrolled sideways.
+private struct CaskShelfRow: View {
+    let title: String
+    let packages: [CatalogPackage]
+    let total: Int
+    @Binding var selectedPackage: CatalogPackage?
+    let action: (CatalogPackage) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ShelfSubheading(title: title, shown: packages.count, total: total)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 12) {
+                    ForEach(packages) { package in
+                        CatalogCard(
+                            package: package,
+                            isSelected: selectedPackage?.id == package.id,
+                            open: { selectedPackage = package },
+                            action: { action(package) }
+                        )
+                        .frame(width: 240)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+        }
+    }
+}
+
+/// Formulae: a list, because a card of an icon-less CLI tool says nothing a
+/// row does not say more compactly.
+private struct FormulaShelfList: View {
+    let title: String
+    let packages: [CatalogPackage]
+    let total: Int
+    @Binding var selectedPackage: CatalogPackage?
+    let action: (CatalogPackage) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ShelfSubheading(title: title, shown: packages.count, total: total)
+
+            VStack(spacing: 0) {
+                ForEach(Array(packages.enumerated()), id: \.element.id) { index, package in
+                    if index > 0 {
+                        Divider()
+                    }
+                    FormulaRow(
+                        package: package,
+                        isSelected: selectedPackage?.id == package.id,
+                        open: { selectedPackage = package },
+                        action: { action(package) }
+                    )
+                }
+            }
+            .background(Color(nsColor: .textBackgroundColor))
+            .cornerRadius(8)
+        }
+    }
+}
+
+private struct ShelfSubheading: View {
+    let title: String
+    let shown: Int
+    let total: Int
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(title)
+                .font(.headline)
+            if total > shown {
+                Text("\(shown) of \(total)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+}
+
+private struct FormulaRow: View {
+    let package: CatalogPackage
+    let isSelected: Bool
+    let open: () -> Void
+    let action: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            PackageIconView(package: package, size: 26, cornerRadius: 6)
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(package.displayName)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+                    Text(package.version ?? "Unknown")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                Text(package.description ?? "No description available")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            Button(package.installStatus.title, action: action)
+                .disabled(package.installStatus == .installed(outdated: false))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(isSelected ? Color.accentColor.opacity(0.14) : Color.clear)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: open)
     }
 }
 
 private struct CatalogCard: View {
     let package: CatalogPackage
+    let isSelected: Bool
     let open: () -> Void
     let action: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Button(action: open) {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(alignment: .top, spacing: 10) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(package.kind == .cask ? Color.blue.opacity(0.16) : Color.green.opacity(0.16))
-                            Image(systemName: package.kind == .cask ? "macwindow" : "terminal")
-                                .font(.title2)
-                                .foregroundColor(package.kind == .cask ? .blue : .green)
-                        }
-                        .frame(width: 46, height: 46)
+            HStack(alignment: .top, spacing: 10) {
+                PackageIconView(package: package, size: 46)
 
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(package.displayName)
-                                .font(.headline)
-                                .lineLimit(2)
-                            Text(package.name)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                        }
-                    }
-
-                    Text(package.description ?? "No description available")
-                        .font(.callout)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(package.displayName)
+                        .font(.headline)
+                        .lineLimit(2)
+                    Text(package.name)
+                        .font(.caption)
                         .foregroundColor(.secondary)
-                        .lineLimit(3)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1)
                 }
             }
-            .buttonStyle(.plain)
+
+            Text(package.description ?? "No description available")
+                .font(.callout)
+                .foregroundColor(.secondary)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
 
             Spacer(minLength: 0)
 
             HStack {
-                Text(package.kind.title)
-                    .font(.caption)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .background(Color(nsColor: .controlBackgroundColor))
-                    .cornerRadius(6)
-
                 Text(package.version ?? "Unknown")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -194,9 +395,15 @@ private struct CatalogCard: View {
             }
         }
         .padding(14)
-        .frame(minHeight: 180, alignment: .topLeading)
+        .frame(minHeight: 190, alignment: .topLeading)
         .background(Color(nsColor: .textBackgroundColor))
         .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture(perform: open)
     }
 }
 
@@ -211,14 +418,7 @@ struct CatalogPackageDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack(alignment: .top, spacing: 14) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(package.kind == .cask ? Color.blue.opacity(0.16) : Color.green.opacity(0.16))
-                                Image(systemName: package.kind == .cask ? "macwindow" : "terminal")
-                                    .font(.largeTitle)
-                                    .foregroundColor(package.kind == .cask ? .blue : .green)
-                            }
-                            .frame(width: 72, height: 72)
+                            PackageIconView(package: package, size: 72, cornerRadius: 12)
 
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(package.displayName)

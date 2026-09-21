@@ -14,6 +14,9 @@ public struct BrewPackage: Identifiable, Equatable {
     public let dependencies: [String]
     public let caveats: String?
     public let installedPaths: [String]
+    /// The `.app` bundle this cask installs, when it declares one. Nil for
+    /// formulae and for casks that ship only fonts, pkgs or binaries.
+    public let appBundleName: String?
     public var pinned: Bool
     public var outdated: Bool
 
@@ -29,6 +32,7 @@ public struct BrewPackage: Identifiable, Equatable {
         dependencies: [String] = [],
         caveats: String? = nil,
         installedPaths: [String] = [],
+        appBundleName: String? = nil,
         pinned: Bool = false,
         outdated: Bool = false
     ) {
@@ -43,6 +47,7 @@ public struct BrewPackage: Identifiable, Equatable {
         self.dependencies = dependencies
         self.caveats = caveats
         self.installedPaths = installedPaths
+        self.appBundleName = appBundleName
         self.pinned = pinned
         self.outdated = outdated
         self.nodeID = PackageNodeID(kind: kind, name: name)

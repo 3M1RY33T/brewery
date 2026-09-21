@@ -50,7 +50,22 @@
       "version": "1.100.0",
       "installed": "1.100.0",
       "pinned": false,
-      "outdated": false
+      "outdated": false,
+      "artifacts": [
+        {
+          "uninstall": [
+            {
+              "quit": "com.microsoft.VSCode"
+            }
+          ]
+        },
+        {
+          "app": [
+            "Visual Studio Code.app"
+          ],
+          "target": "/Applications/Visual Studio Code.app"
+        }
+      ]
     }
   ],
   "ignored": {

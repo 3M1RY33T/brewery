@@ -7,16 +7,20 @@ struct PackageTableView: View {
     var body: some View {
         Table(store.filteredPackages, selection: $store.selectedPackageID) {
             TableColumn("Name") { package in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(package.displayName)
-                        .fontWeight(.medium)
-                    Text(package.name)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                HStack(spacing: 8) {
+                    PackageIconView(package: package, size: 24, cornerRadius: 5)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(package.displayName)
+                            .fontWeight(.medium)
+                        Text(package.name)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
                 .padding(.vertical, 3)
             }
-            .width(min: 170, ideal: 240)
+            .width(min: 190, ideal: 260)
 
             TableColumn("Type") { package in
                 Text(package.kind.title)

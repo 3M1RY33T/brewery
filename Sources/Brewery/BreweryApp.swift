@@ -10,6 +10,9 @@ struct BreweryApp: App {
             ContentView()
                 .environmentObject(store)
                 .frame(minWidth: 1080, minHeight: 720)
+                .task {
+                    PackageIconLoader.shared.configure(brewPath: store.service.brewPath)
+                }
         }
         .commands {
             CommandGroup(after: .appInfo) {

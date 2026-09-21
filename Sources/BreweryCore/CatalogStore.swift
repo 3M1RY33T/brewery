@@ -20,6 +20,7 @@ public struct URLSessionCatalogFetcher: CatalogFetching {
 public enum CatalogError: LocalizedError, Equatable {
     case httpStatus(Int)
     case noCachedCatalog
+    case staleCacheFormat
 
     public var errorDescription: String? {
         switch self {
@@ -27,6 +28,8 @@ public enum CatalogError: LocalizedError, Equatable {
             return "Catalog request failed with HTTP \(status)."
         case .noCachedCatalog:
             return "No cached catalog is available."
+        case .staleCacheFormat:
+            return "The cached catalog was written by an older version of Brewery."
         }
     }
 }
@@ -34,20 +37,18 @@ public enum CatalogError: LocalizedError, Equatable {
 @MainActor
 public final class CatalogStore: ObservableObject {
     @Published public private(set) var packages: [CatalogPackage] = []
+    /// The browse shelves, rebuilt only when the catalog itself changes.
+    @Published public private(set) var sections: [CatalogSection] = []
     @Published public private(set) var isLoading = false
     @Published public private(set) var statusMessage = "Catalog not loaded"
     @Published public var searchText = ""
-    @Published public var kindFilter: CatalogKindFilter = .all {
-        didSet {
-            normalizeCategory()
-        }
-    }
-    @Published public var category: CatalogCategory = .featured
 
     private let fetcher: CatalogFetching
     private let cacheURL: URL
     private let formulaURL: URL
     private let caskURL: URL
+    private let formulaAnalyticsURL: URL
+    private let caskAnalyticsURL: URL
     private let cacheLifetime: TimeInterval
 
     public init(
@@ -55,22 +56,25 @@ public final class CatalogStore: ObservableObject {
         cacheURL: URL = CatalogStore.defaultCacheURL(),
         formulaURL: URL = URL(string: "https://formulae.brew.sh/api/formula.json")!,
         caskURL: URL = URL(string: "https://formulae.brew.sh/api/cask.json")!,
+        formulaAnalyticsURL: URL = URL(string: "https://formulae.brew.sh/api/analytics/install/365d.json")!,
+        caskAnalyticsURL: URL = URL(string: "https://formulae.brew.sh/api/analytics/cask-install/365d.json")!,
         cacheLifetime: TimeInterval = 60 * 60 * 18
     ) {
         self.fetcher = fetcher
         self.cacheURL = cacheURL
         self.formulaURL = formulaURL
         self.caskURL = caskURL
+        self.formulaAnalyticsURL = formulaAnalyticsURL
+        self.caskAnalyticsURL = caskAnalyticsURL
         self.cacheLifetime = cacheLifetime
     }
 
-    public var filteredPackages: [CatalogPackage] {
-        CatalogSearch.filter(
-            packages,
-            searchText: searchText,
-            kindFilter: kindFilter,
-            category: category
-        )
+    public var isSearching: Bool {
+        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    public var searchResults: CatalogSearchResults {
+        CatalogSearch.searchResults(packages, searchText: searchText)
     }
 
     public func load(installedPackages: [BrewPackage], forceRefresh: Bool = false) async {
@@ -80,11 +84,11 @@ public final class CatalogStore: ObservableObject {
 
         do {
             let snapshot = try forceRefresh ? await fetchCatalog() : await loadCachedOrFetch()
-            packages = CatalogSearch.merge(snapshot.packages, installedPackages: installedPackages)
+            apply(snapshot, installedPackages: installedPackages)
             statusMessage = "Loaded \(packages.count) catalog items"
         } catch {
             if let cached = try? loadCachedSnapshot() {
-                packages = CatalogSearch.merge(cached.packages, installedPackages: installedPackages)
+                apply(cached, installedPackages: installedPackages)
                 statusMessage = "Using cached catalog"
             } else {
                 statusMessage = error.localizedDescription
@@ -94,11 +98,12 @@ public final class CatalogStore: ObservableObject {
 
     public func mergeInstalledState(_ installedPackages: [BrewPackage]) {
         packages = CatalogSearch.merge(packages, installedPackages: installedPackages)
+        sections = CatalogSearch.merge(sections, installedPackages: installedPackages)
     }
 
-    public func normalizeCategory() {
-        guard !CatalogCategory.available(for: kindFilter).contains(category) else { return }
-        category = .featured
+    private func apply(_ snapshot: CatalogSnapshot, installedPackages: [BrewPackage]) {
+        packages = CatalogSearch.merge(snapshot.packages, installedPackages: installedPackages)
+        sections = CatalogSearch.sections(packages)
     }
 
     private func loadCachedOrFetch() async throws -> CatalogSnapshot {
@@ -111,9 +116,21 @@ public final class CatalogStore: ObservableObject {
     private func fetchCatalog() async throws -> CatalogSnapshot {
         async let formulaData = fetcher.data(from: formulaURL)
         async let caskData = fetcher.data(from: caskURL)
+        // Analytics only order the shelves, so a failure here must not cost
+        // the user the catalog itself.
+        async let formulaAnalytics = try? fetcher.data(from: formulaAnalyticsURL)
+        async let caskAnalytics = try? fetcher.data(from: caskAnalyticsURL)
 
-        let packages = try await CatalogPackageMapper.formulaPackages(from: formulaData)
-            + CatalogPackageMapper.caskPackages(from: caskData)
+        let formulaPopularity = await formulaAnalytics.flatMap {
+            try? CatalogPackageMapper.installCounts(from: $0, kind: .formula)
+        } ?? [:]
+        let caskPopularity = await caskAnalytics.flatMap {
+            try? CatalogPackageMapper.installCounts(from: $0, kind: .cask)
+        } ?? [:]
+
+        let packages = try await CatalogPackageMapper.formulaPackages(from: formulaData, popularity: formulaPopularity)
+            + CatalogPackageMapper.caskPackages(from: caskData, popularity: caskPopularity)
+
         let snapshot = CatalogSnapshot(
             fetchedAt: Date(),
             packages: packages.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
@@ -124,7 +141,9 @@ public final class CatalogStore: ObservableObject {
 
     private func loadCachedSnapshot() throws -> CatalogSnapshot {
         let data = try Data(contentsOf: cacheURL)
-        return try JSONDecoder().decode(CatalogSnapshot.self, from: data)
+        let snapshot = try JSONDecoder().decode(CatalogSnapshot.self, from: data)
+        guard snapshot.isCurrent else { throw CatalogError.staleCacheFormat }
+        return snapshot
     }
 
     private func save(_ snapshot: CatalogSnapshot) throws {
@@ -139,66 +158,5 @@ public final class CatalogStore: ObservableObject {
         return base
             .appendingPathComponent("Brewery", isDirectory: true)
             .appendingPathComponent("catalog-cache.json")
-    }
-}
-
-public enum CatalogSearch {
-    public static func merge(_ packages: [CatalogPackage], installedPackages: [BrewPackage]) -> [CatalogPackage] {
-        let installed = Dictionary(uniqueKeysWithValues: installedPackages.map { ($0.nodeID, $0) })
-        return packages.map { package in
-            var merged = package
-            if let installedPackage = installed[package.nodeID] {
-                merged.installStatus = .installed(outdated: installedPackage.outdated)
-            } else {
-                merged.installStatus = .notInstalled
-            }
-            return merged
-        }
-    }
-
-    public static func filter(
-        _ packages: [CatalogPackage],
-        searchText: String,
-        kindFilter: CatalogKindFilter,
-        category: CatalogCategory
-    ) -> [CatalogPackage] {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return packages
-            .filter { package in
-                switch kindFilter {
-                case .all:
-                    return true
-                case .casks:
-                    return package.kind == .cask
-                case .formulae:
-                    return package.kind == .formula
-                }
-            }
-            .filter { package in
-                category == .featured || package.categoryScore(for: category) > 0
-            }
-            .filter { package in
-                query.isEmpty || package.searchIndex.contains(query)
-            }
-            .sorted { lhs, rhs in
-                let left = rank(lhs, query: query, category: category)
-                let right = rank(rhs, query: query, category: category)
-                if left != right { return left > right }
-                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
-            }
-    }
-
-    private static func rank(_ package: CatalogPackage, query: String, category: CatalogCategory) -> Int {
-        var score = package.categoryScore(for: category)
-        guard !query.isEmpty else { return score }
-
-        let name = package.name.lowercased()
-        let displayName = package.displayName.lowercased()
-        if name == query { score += 100 }
-        if displayName == query { score += 90 }
-        if name.hasPrefix(query) { score += 60 }
-        if displayName.hasPrefix(query) { score += 50 }
-        if package.searchIndex.contains(query) { score += 10 }
-        return score
     }
 }

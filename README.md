@@ -1,12 +1,50 @@
-
 <div align="center">
   <img src="Sources/Brewery/Resources/brewery-logo.png" alt="Brewery app icon" width="160" height="160">
-  <h1 style="padding:20px;">Brewery</h1>
+  <h1>Brewery</h1>
+  <p><b>A native SwiftUI client for Homebrew that shows you what depends on what, before you uninstall it.</b></p>
 </div>
 
-Brewery is a native SwiftUI macOS client for managing local Homebrew formulae and casks. It detects an existing Homebrew installation, loads installed packages, shows outdated status, displays dependency/dependent relationships, and runs package actions only after confirmation.
+Brewery reads your installed formulae and casks, builds the dependency graph in memory from Homebrew's own JSON, and puts the answer to "what breaks if this goes" next to the uninstall button. Every mutating command is shown to you in full and confirmed before it runs.
 
-![Brewery Browse view](Docs/Screenshots/brewery-browse.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Docs/Screenshots/brewery-dependencies-dark.png">
+  <img alt="Brewery with openssl@3 selected, its one dependency and fifteen dependents listed in the detail pane" src="Docs/Screenshots/brewery-dependencies-light.png">
+</picture>
+
+Selecting a package lists its direct dependencies and its direct dependents, and every entry is clickable, so the graph can be walked in either direction. The `Graph` column carries the same two counts for every row in the table.
+
+## Install
+
+Download the latest release from [GitHub Releases](https://github.com/3M1RY33T/brewery/releases), unzip if needed, and move `Brewery.app` to your `Applications` folder.
+
+Brewery is not signed or notarized yet. On first launch macOS will refuse to open it: open it from Finder with Control-click > Open, and confirm once.
+
+## Nothing runs without confirmation
+
+Update, install, upgrade, uninstall and cleanup all stop here first. The exact `brew` command is printed, and nothing executes until you press Run Command. Output is streamed into the log at the bottom of the window as it happens.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Docs/Screenshots/brewery-confirm-dark.png">
+  <img alt="A confirmation sheet titled Uninstall openssl@3, showing the exact command brew uninstall openssl@3 with Cancel and Run Command buttons" src="Docs/Screenshots/brewery-confirm-light.png">
+</picture>
+
+## Browse the whole catalog
+
+Search every official formula and cask, filtered by type and by category. The catalog is cached locally, so it still opens when a network refresh fails.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Docs/Screenshots/brewery-browse-dark.png">
+  <img alt="Brewery's catalog browser, an App Store style grid of Homebrew casks and formulae with category filters and per-package Install buttons" src="Docs/Screenshots/brewery-browse-light.png">
+</picture>
+
+## Diagnostics
+
+`brew --version`, `brew config` and `brew doctor`, read without leaving the app.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Docs/Screenshots/brewery-diagnostics-dark.png">
+  <img alt="Brewery's diagnostics pane showing Homebrew version, configuration and brew doctor output" src="Docs/Screenshots/brewery-diagnostics-light.png">
+</picture>
 
 ## Requirements
 
@@ -15,13 +53,21 @@ Brewery is a native SwiftUI macOS client for managing local Homebrew formulae an
 
 Swift 5.9 or newer is only needed when building from source.
 
-## Install
+## Features
 
-Download the latest Brewery release from [GitHub Releases](https://github.com/3M1RY33T/brewery/releases), unzip the app if needed, and move `Brewery.app` to your `Applications` folder.
+- Detect an existing Homebrew installation.
+- Load installed formulae and casks with `brew info --json=v2 --installed`.
+- Show outdated packages with `brew outdated --json=v2`.
+- Confirm before running mutating commands: update, install, upgrade, uninstall, and cleanup.
+- Stream command output into an in-app log.
+- Show basic diagnostics from `brew --version`, `brew config`, and `brew doctor`.
+- Build an in-memory dependency graph from Homebrew JSON instead of running per-package dependency commands.
+- Show direct dependencies and dependents in the package detail pane.
+- Browse official Homebrew formulae and casks with an App Store-style catalog view.
+- Cache the browse catalog locally and use cached data when network refresh fails.
+- Provide sidebar filters for all packages, formulae, casks, outdated packages, pinned packages, and diagnostics.
 
-Brewery is distributed as a source-built macOS app for now. If macOS warns that the app cannot be opened because it was downloaded from the internet, open it from Finder with Control-click > Open.
-
-### Manual Build
+## Build from source
 
 Clone the repository, then build and open the local app bundle:
 
@@ -45,25 +91,11 @@ The build script also generates `BreweryIcon.icns` from `brewery-logo.png` for t
 swift test
 ```
 
-## Features
-
-- Detect an existing Homebrew installation.
-- Load installed formulae and casks with `brew info --json=v2 --installed`.
-- Show outdated packages with `brew outdated --json=v2`.
-- Confirm before running mutating commands: update, install, upgrade, uninstall, and cleanup.
-- Stream command output into an in-app log.
-- Show basic diagnostics from `brew --version`, `brew config`, and `brew doctor`.
-- Build an in-memory dependency graph from Homebrew JSON instead of running per-package dependency commands.
-- Show direct dependencies and dependents in the package detail pane.
-- Browse official Homebrew formulae and casks with an App Store-style catalog view.
-- Cache the browse catalog locally and use cached data when network refresh fails.
-- Provide sidebar filters for all packages, formulae, casks, outdated packages, pinned packages, and diagnostics.
-
 ## Credits
 
 Brewery is an independent open-source project and is not affiliated with Homebrew or Apple.
 
-Brewery uses Homebrew’s command-line interface and official JSON API for package metadata. Homebrew is maintained by the Homebrew project and contributors: https://brew.sh/
+Brewery uses Homebrew's command-line interface and official JSON API for package metadata. Homebrew is maintained by the Homebrew project and contributors: https://brew.sh/
 
 Built with SwiftUI.
 
@@ -71,7 +103,7 @@ Built with SwiftUI.
 
 Brewery does not install Homebrew automatically.
 
-### [Install Homebrew on MacOS:](https://brew.sh/)
+### [Install Homebrew on macOS:](https://brew.sh/)
 
 ```bash
 $ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"

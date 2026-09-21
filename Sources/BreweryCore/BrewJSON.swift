@@ -106,6 +106,7 @@ struct CaskInfo: Decodable {
     let outdated: Bool?
     let caveats: String?
     let dependsOn: FlexibleDependencyMap?
+    let artifacts: CaskArtifacts?
 
     private enum CodingKeys: String, CodingKey {
         case token
@@ -121,6 +122,7 @@ struct CaskInfo: Decodable {
         case outdated
         case caveats
         case dependsOn = "depends_on"
+        case artifacts
     }
 }
 
@@ -313,6 +315,7 @@ enum BrewPackageMapper {
                 dependencies: caskDependencies.map(\.name).sorted(),
                 caveats: cask.caveats,
                 installedPaths: [],
+                appBundleName: cask.artifacts?.appBundleName,
                 pinned: outdatedItem?.pinned ?? cask.pinned ?? false,
                 outdated: outdatedItem != nil || cask.outdated == true
             )

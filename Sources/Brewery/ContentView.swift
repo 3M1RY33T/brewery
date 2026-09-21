@@ -146,6 +146,10 @@ struct ContentView: View {
                 }
             } else if store.filter == .diagnostics {
                 DiagnosticsView()
+            } else if store.filter == .casks {
+                CaskGridView { action in
+                    pendingAction = action
+                }
             } else {
                 PackageTableView()
             }

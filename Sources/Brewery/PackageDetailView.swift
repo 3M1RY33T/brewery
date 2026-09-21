@@ -39,19 +39,25 @@ struct PackageDetailView: View {
 
     private func header(for package: BrewPackage) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(package.displayName)
-                .font(.title2)
-                .fontWeight(.semibold)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-                .textSelection(.enabled)
+            HStack(alignment: .top, spacing: 12) {
+                PackageIconView(package: package, size: 56, cornerRadius: 10)
 
-            Text(package.name)
-                .font(.callout)
-                .foregroundColor(.secondary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-                .textSelection(.enabled)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(package.displayName)
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+
+                    Text(package.name)
+                        .font(.callout)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                }
+            }
 
             if let description = package.description {
                 Text(description)

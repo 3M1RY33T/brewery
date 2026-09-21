@@ -15,59 +15,6 @@ public enum CatalogInstallStatus: Equatable {
     }
 }
 
-public enum CatalogKindFilter: String, CaseIterable, Identifiable {
-    case all
-    case casks
-    case formulae
-
-    public var id: String { rawValue }
-
-    public var title: String {
-        switch self {
-        case .all: return "All"
-        case .casks: return "Casks"
-        case .formulae: return "Formulae"
-        }
-    }
-}
-
-public enum CatalogCategory: String, CaseIterable, Identifiable {
-    case featured
-    case guiApps
-    case developerTools
-    case media
-    case productivity
-    case cliTools
-    case libraries
-    case utilities
-
-    public var id: String { rawValue }
-
-    public var title: String {
-        switch self {
-        case .featured: return "Featured"
-        case .guiApps: return "GUI Apps"
-        case .developerTools: return "Developer Tools"
-        case .media: return "Media"
-        case .productivity: return "Productivity"
-        case .cliTools: return "CLI Tools"
-        case .libraries: return "Libraries"
-        case .utilities: return "Utilities"
-        }
-    }
-
-    public static func available(for filter: CatalogKindFilter) -> [CatalogCategory] {
-        switch filter {
-        case .all:
-            return allCases
-        case .casks:
-            return [.featured, .guiApps, .developerTools, .media, .productivity, .utilities]
-        case .formulae:
-            return [.featured, .developerTools, .media, .productivity, .cliTools, .libraries, .utilities]
-        }
-    }
-}
-
 public struct CatalogPackage: Identifiable, Equatable {
     public let id: String
     public let nodeID: PackageNodeID
@@ -79,6 +26,13 @@ public struct CatalogPackage: Identifiable, Equatable {
     public let version: String?
     public let tap: String?
     public let dependencies: [String]
+    /// The `.app` bundle this cask installs, when it declares one. Nil for
+    /// formulae and for casks that ship only fonts, pkgs or binaries.
+    public let appBundleName: String?
+    /// Installs over the last 365 days, from Homebrew's own analytics. Zero
+    /// when analytics could not be fetched, which degrades ordering to
+    /// alphabetical rather than breaking the shelves.
+    public let popularity: Int
     public let searchIndex: String
     public var installStatus: CatalogInstallStatus
 
@@ -91,6 +45,8 @@ public struct CatalogPackage: Identifiable, Equatable {
         version: String? = nil,
         tap: String? = nil,
         dependencies: [String] = [],
+        appBundleName: String? = nil,
+        popularity: Int = 0,
         installStatus: CatalogInstallStatus = .notInstalled
     ) {
         self.name = name
@@ -101,6 +57,8 @@ public struct CatalogPackage: Identifiable, Equatable {
         self.version = version
         self.tap = tap
         self.dependencies = dependencies
+        self.appBundleName = appBundleName
+        self.popularity = popularity
         self.installStatus = installStatus
         self.nodeID = PackageNodeID(kind: kind, name: name)
         self.id = nodeID.id
@@ -116,66 +74,81 @@ public struct CatalogPackage: Identifiable, Equatable {
         .lowercased()
     }
 
-    public func categoryScore(for category: CatalogCategory) -> Int {
-        let text = searchIndex
-        switch category {
-        case .featured:
-            return 1
-        case .guiApps:
-            return kind == .cask ? 3 : 0
-        case .developerTools:
-            return score(text, ["developer", "development", "code", "compiler", "debug", "sdk", "git", "api", "database"])
-        case .media:
-            return score(text, ["media", "video", "audio", "music", "photo", "image", "player", "stream"])
-        case .productivity:
-            return score(text, ["productivity", "note", "calendar", "task", "office", "pdf", "document", "writing"])
-        case .cliTools:
-            return kind == .formula ? score(text, ["cli", "command", "terminal", "shell", "tool"]) + 1 : 0
-        case .libraries:
-            return kind == .formula ? score(text, ["library", "libraries", "framework", "runtime", "bindings"]) : 0
-        case .utilities:
-            return isUncategorizedUtility ? 1 : 0
-        }
+    /// A copy carrying a different install status, used when the installed
+    /// set changes without the catalog itself being refetched.
+    func withInstallStatus(_ status: CatalogInstallStatus) -> CatalogPackage {
+        var copy = self
+        copy.installStatus = status
+        return copy
     }
+}
 
-    private var isUncategorizedUtility: Bool {
-        let categories = CatalogCategory.available(for: kind == .cask ? .casks : .formulae)
-            .filter { $0 != .featured && $0 != .utilities }
-        return categories.allSatisfy { categoryScore(forNonFallbackCategory: $0) == 0 }
+/// One browse shelf: a category, the casks on it, and the formulae on it.
+///
+/// Both lists are already trimmed to what the shelf displays; `caskTotal` and
+/// `formulaTotal` report how many the category holds in full.
+public struct CatalogSection: Identifiable, Equatable {
+    public let category: CatalogCategory
+    public let casks: [CatalogPackage]
+    public let formulae: [CatalogPackage]
+    public let caskTotal: Int
+    public let formulaTotal: Int
+
+    public var id: String { category.rawValue }
+    public var isEmpty: Bool { casks.isEmpty && formulae.isEmpty }
+
+    public init(
+        category: CatalogCategory,
+        casks: [CatalogPackage],
+        formulae: [CatalogPackage],
+        caskTotal: Int? = nil,
+        formulaTotal: Int? = nil
+    ) {
+        self.category = category
+        self.casks = casks
+        self.formulae = formulae
+        self.caskTotal = caskTotal ?? casks.count
+        self.formulaTotal = formulaTotal ?? formulae.count
     }
+}
 
-    private func categoryScore(forNonFallbackCategory category: CatalogCategory) -> Int {
-        let text = searchIndex
-        switch category {
-        case .featured:
-            return 1
-        case .guiApps:
-            return kind == .cask ? 3 : 0
-        case .developerTools:
-            return score(text, ["developer", "development", "code", "compiler", "debug", "sdk", "git", "api", "database"])
-        case .media:
-            return score(text, ["media", "video", "audio", "music", "photo", "image", "player", "stream"])
-        case .productivity:
-            return score(text, ["productivity", "note", "calendar", "task", "office", "pdf", "document", "writing"])
-        case .cliTools:
-            return kind == .formula ? score(text, ["cli", "command", "terminal", "shell", "tool"]) + 1 : 0
-        case .libraries:
-            return kind == .formula ? score(text, ["library", "libraries", "framework", "runtime", "bindings"]) : 0
-        case .utilities:
-            return 0
-        }
-    }
+/// Search output, kept split so each kind keeps its own presentation.
+public struct CatalogSearchResults: Equatable {
+    public let casks: [CatalogPackage]
+    public let formulae: [CatalogPackage]
 
-    private func score(_ text: String, _ keywords: [String]) -> Int {
-        keywords.reduce(0) { partial, keyword in
-            partial + (text.contains(keyword) ? 1 : 0)
-        }
+    public var isEmpty: Bool { casks.isEmpty && formulae.isEmpty }
+
+    public init(casks: [CatalogPackage], formulae: [CatalogPackage]) {
+        self.casks = casks
+        self.formulae = formulae
     }
 }
 
 public struct CatalogSnapshot: Codable, Equatable {
+    /// Bumped whenever a field is added that the shelves depend on. A cache
+    /// written by an older build decodes with a lower version and is refetched
+    /// rather than silently producing shelves missing that data.
+    public static let currentVersion = 2
+
+    public let version: Int
     public let fetchedAt: Date
     public let packages: [CatalogPackage]
+
+    public init(fetchedAt: Date, packages: [CatalogPackage], version: Int = CatalogSnapshot.currentVersion) {
+        self.version = version
+        self.fetchedAt = fetchedAt
+        self.packages = packages
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
+        fetchedAt = try container.decode(Date.self, forKey: .fetchedAt)
+        packages = try container.decode([CatalogPackage].self, forKey: .packages)
+    }
+
+    public var isCurrent: Bool { version == CatalogSnapshot.currentVersion }
 }
 
 extension CatalogPackage: Codable {
@@ -188,6 +161,8 @@ extension CatalogPackage: Codable {
         case version
         case tap
         case dependencies
+        case appBundleName
+        case popularity
     }
 
     public init(from decoder: Decoder) throws {
@@ -201,7 +176,9 @@ extension CatalogPackage: Codable {
             homepage: homepageString.flatMap(URL.init(string:)),
             version: try container.decodeIfPresent(String.self, forKey: .version),
             tap: try container.decodeIfPresent(String.self, forKey: .tap),
-            dependencies: try container.decodeIfPresent([String].self, forKey: .dependencies) ?? []
+            dependencies: try container.decodeIfPresent([String].self, forKey: .dependencies) ?? [],
+            appBundleName: try container.decodeIfPresent(String.self, forKey: .appBundleName),
+            popularity: try container.decodeIfPresent(Int.self, forKey: .popularity) ?? 0
         )
     }
 
@@ -215,5 +192,7 @@ extension CatalogPackage: Codable {
         try container.encodeIfPresent(version, forKey: .version)
         try container.encodeIfPresent(tap, forKey: .tap)
         try container.encode(dependencies, forKey: .dependencies)
+        try container.encodeIfPresent(appBundleName, forKey: .appBundleName)
+        try container.encode(popularity, forKey: .popularity)
     }
 }

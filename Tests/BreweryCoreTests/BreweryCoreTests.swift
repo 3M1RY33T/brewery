@@ -1,3 +1,5 @@
+import CoreGraphics
+import ImageIO
 import XCTest
 @testable import BreweryCore
 
@@ -31,6 +33,8 @@ final class BreweryCoreTests: XCTestCase {
         XCTAssertEqual(code.displayName, "Visual Studio Code")
         XCTAssertEqual(code.installedVersion, "1.100.0")
         XCTAssertFalse(code.outdated)
+        XCTAssertEqual(code.appBundleName, "Visual Studio Code.app")
+        XCTAssertNil(wget.appBundleName)
     }
 
     func testBuildsDependencyGraphFromRuntimeDependencies() throws {
@@ -95,61 +99,97 @@ final class BreweryCoreTests: XCTestCase {
         XCTAssertEqual(code.kind, .cask)
         XCTAssertEqual(code.displayName, "Visual Studio Code")
         XCTAssertEqual(code.dependencies, ["mono-mdk"])
+        XCTAssertEqual(code.appBundleName, "Visual Studio Code.app")
+
+        let vlc = try XCTUnwrap(casks.first { $0.name == "vlc" })
+        XCTAssertEqual(vlc.appBundleName, "VLC.app")
+
+        let font = try XCTUnwrap(casks.first { $0.name == "font-hack-nerd-font" })
+        XCTAssertNil(font.appBundleName)
+
+        XCTAssertTrue(formulae.allSatisfy { $0.appBundleName == nil })
     }
 
-    func testCatalogSearchRankingAndFilters() throws {
+    func testCatalogSearchSplitsResultsByKind() throws {
         let packages = try CatalogPackageMapper.formulaPackages(from: fixture("catalog-formula"))
             + CatalogPackageMapper.caskPackages(from: fixture("catalog-cask"))
 
-        let searchResults = CatalogSearch.filter(
-            packages,
-            searchText: "wget",
-            kindFilter: .all,
-            category: .featured
-        )
+        let results = CatalogSearch.searchResults(packages, searchText: "wget")
+        XCTAssertEqual(results.formulae.first?.name, "wget")
+        XCTAssertTrue(results.casks.allSatisfy { $0.kind == .cask })
 
-        XCTAssertEqual(searchResults.first?.name, "wget")
+        let code = CatalogSearch.searchResults(packages, searchText: "visual studio")
+        XCTAssertEqual(code.casks.first?.name, "visual-studio-code")
+        XCTAssertTrue(code.formulae.allSatisfy { $0.kind == .formula })
 
-        let caskResults = CatalogSearch.filter(
-            packages,
-            searchText: "",
-            kindFilter: .casks,
-            category: .guiApps
-        )
-
-        XCTAssertTrue(caskResults.allSatisfy { $0.kind == .cask })
-        XCTAssertTrue(caskResults.contains { $0.name == "visual-studio-code" })
+        XCTAssertTrue(CatalogSearch.searchResults(packages, searchText: "   ").isEmpty)
     }
 
-    @MainActor
-    func testCatalogCategoriesFollowKindFilter() {
-        XCTAssertFalse(CatalogCategory.available(for: .formulae).contains(.guiApps))
-        XCTAssertFalse(CatalogCategory.available(for: .casks).contains(.cliTools))
-        XCTAssertFalse(CatalogCategory.available(for: .casks).contains(.libraries))
-        XCTAssertTrue(CatalogCategory.available(for: .casks).contains(.utilities))
-        XCTAssertTrue(CatalogCategory.available(for: .formulae).contains(.utilities))
-        XCTAssertTrue(CatalogCategory.available(for: .all).contains(.guiApps))
-        XCTAssertTrue(CatalogCategory.available(for: .all).contains(.cliTools))
+    func testShelvesRankByInstallCountAndSplitByKind() throws {
+        let packages = [
+            CatalogPackage(name: "rare-app", kind: .cask, description: "Video player", popularity: 10),
+            CatalogPackage(name: "popular-app", kind: .cask, description: "Video player", popularity: 9_000),
+            CatalogPackage(name: "ffmpeg", kind: .formula, description: "Play, record and convert audio", popularity: 500)
+        ]
 
-        let store = CatalogStore()
-        store.category = .guiApps
-        store.kindFilter = .formulae
+        let sections = CatalogSearch.sections(packages)
+        let featured = try XCTUnwrap(sections.first { $0.category == .featured })
 
-        XCTAssertEqual(store.category, .featured)
+        // Featured is a ranking across everything, most installed first.
+        XCTAssertEqual(featured.casks.map(\.name), ["popular-app", "rare-app"])
+        XCTAssertEqual(featured.formulae.map(\.name), ["ffmpeg"])
+
+        let media = sections.first { $0.category == .media }
+        XCTAssertEqual(media?.casks.map(\.name), ["popular-app", "rare-app"])
+        XCTAssertEqual(media?.formulae.map(\.name), ["ffmpeg"])
+
+        // Empty shelves are not rendered at all.
+        XCTAssertFalse(sections.contains { $0.isEmpty })
     }
 
-    func testCatalogPackagesHaveAtLeastOneNonFeaturedCategoryForTheirKind() throws {
+    func testShelvesCapEachKindButReportTheTrueTotal() {
+        let packages = (0..<40).map {
+            CatalogPackage(name: "cask-\($0)", kind: .cask, description: "Video player", popularity: 40 - $0)
+        }
+
+        let media = CatalogSearch.sections(packages, caskLimit: 5, formulaLimit: 5)
+            .first { $0.category == .media }
+
+        XCTAssertEqual(media?.casks.count, 5)
+        XCTAssertEqual(media?.caskTotal, 40)
+        XCTAssertEqual(media?.casks.first?.name, "cask-0")
+    }
+
+    func testEveryPackageLandsOnExactlyOneSubjectShelf() throws {
         let packages = try CatalogPackageMapper.formulaPackages(from: fixture("catalog-formula"))
             + CatalogPackageMapper.caskPackages(from: fixture("catalog-cask"))
 
         for package in packages {
-            let filter: CatalogKindFilter = package.kind == .cask ? .casks : .formulae
-            let categories = CatalogCategory.available(for: filter)
-                .filter { $0 != .featured }
-                .filter { package.categoryScore(for: $0) > 0 }
-
-            XCTAssertFalse(categories.isEmpty, "\(package.name) has no non-featured category")
+            let category = CatalogSearch.category(for: package)
+            XCTAssertNotEqual(category, .featured, "\(package.name) was assigned to a ranking, not a subject")
         }
+
+        // Subject shelves never repeat a package; featured deliberately does.
+        let sections = CatalogSearch.sections(packages).filter { $0.category != .featured }
+        let placed = sections.flatMap { $0.casks + $0.formulae }.map(\.id)
+        XCTAssertEqual(placed.count, Set(placed).count)
+    }
+
+    func testCategoryKeywordsMatchWholeWordsNotSubstrings() {
+        // "ai" must not claim "email", "maintain" or "chain".
+        let mail = CatalogPackage(name: "mailcheck", kind: .formula, description: "Check email from the terminal")
+        XCTAssertNotEqual(CatalogSearch.category(for: mail), .ai)
+
+        let llm = CatalogPackage(name: "ollama", kind: .formula, description: "Run an LLM locally")
+        XCTAssertEqual(CatalogSearch.category(for: llm), .ai)
+
+        let phrase = CatalogPackage(name: "torch", kind: .formula, description: "Machine learning framework")
+        XCTAssertEqual(CatalogSearch.category(for: phrase), .ai)
+    }
+
+    func testPackagesNothingClaimsFallBackToUtilities() {
+        let obscure = CatalogPackage(name: "zzz", kind: .formula, description: "Qwerty widget doohickey")
+        XCTAssertEqual(CatalogSearch.category(for: obscure), .utilities)
     }
 
     func testCatalogMergeMarksInstalledAndOutdatedPackages() throws {
@@ -185,6 +225,8 @@ final class BreweryCoreTests: XCTestCase {
 
         await successStore.load(installedPackages: [], forceRefresh: true)
         XCTAssertFalse(successStore.packages.isEmpty)
+        // Analytics were not stubbed, so the catalog must still build shelves.
+        XCTAssertFalse(successStore.sections.isEmpty)
 
         let failingStore = CatalogStore(
             fetcher: MockCatalogFetcher(error: CatalogError.httpStatus(500)),
@@ -197,6 +239,82 @@ final class BreweryCoreTests: XCTestCase {
 
         XCTAssertEqual(failingStore.statusMessage, "Using cached catalog")
         XCTAssertEqual(failingStore.packages.count, successStore.packages.count)
+        XCTAssertEqual(failingStore.sections.count, successStore.sections.count)
+    }
+
+    @MainActor
+    func testAnalyticsOrderTheShelvesWhenAvailable() async throws {
+        let formulaURL = URL(string: "https://example.test/formula.json")!
+        let caskURL = URL(string: "https://example.test/cask.json")!
+        let formulaAnalyticsURL = URL(string: "https://example.test/analytics-formula.json")!
+        let caskAnalyticsURL = URL(string: "https://example.test/analytics-cask.json")!
+
+        let store = CatalogStore(
+            fetcher: MockCatalogFetcher(payloads: [
+                formulaURL: try fixture("catalog-formula"),
+                caskURL: try fixture("catalog-cask"),
+                formulaAnalyticsURL: try fixture("analytics-formula"),
+                caskAnalyticsURL: try fixture("analytics-cask")
+            ]),
+            cacheURL: URL(fileURLWithPath: NSTemporaryDirectory())
+                .appendingPathComponent("brewery-analytics-test-\(UUID().uuidString).json"),
+            formulaURL: formulaURL,
+            caskURL: caskURL,
+            formulaAnalyticsURL: formulaAnalyticsURL,
+            caskAnalyticsURL: caskAnalyticsURL
+        )
+
+        await store.load(installedPackages: [], forceRefresh: true)
+
+        let featured = try XCTUnwrap(store.sections.first { $0.category == .featured })
+        // ripgrep has 900,000 installs against wget's 1,200; vlc beats VS Code.
+        XCTAssertEqual(featured.formulae.first?.name, "ripgrep")
+        XCTAssertEqual(featured.casks.first?.name, "vlc")
+
+        let ripgrep = try XCTUnwrap(store.packages.first { $0.name == "ripgrep" })
+        XCTAssertEqual(ripgrep.popularity, 900_000)
+    }
+
+    func testInstallCountsParseCommaFormattedNumbers() throws {
+        let counts = try CatalogPackageMapper.installCounts(from: fixture("analytics-cask"), kind: .cask)
+        XCTAssertEqual(counts["vlc"], 400_000)
+        XCTAssertEqual(counts["visual-studio-code"], 50)
+        XCTAssertNil(counts["not-a-cask"])
+    }
+
+    @MainActor
+    func testCacheWrittenByAnOlderBuildIsRefetchedNotTrusted() async throws {
+        let cacheURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("brewery-stale-cache-\(UUID().uuidString).json")
+        addTeardownBlock { try? FileManager.default.removeItem(at: cacheURL) }
+
+        // A v1 cache: no popularity, so its shelves would be alphabetical.
+        let legacy: [String: Any] = [
+            "fetchedAt": Date().timeIntervalSinceReferenceDate,
+            "packages": [["name": "wget", "displayName": "wget", "kind": "formula", "dependencies": []]]
+        ]
+        try JSONSerialization.data(withJSONObject: legacy).write(to: cacheURL)
+
+        let formulaURL = URL(string: "https://example.test/formula.json")!
+        let caskURL = URL(string: "https://example.test/cask.json")!
+        let store = CatalogStore(
+            fetcher: MockCatalogFetcher(payloads: [
+                formulaURL: try fixture("catalog-formula"),
+                caskURL: try fixture("catalog-cask")
+            ]),
+            cacheURL: cacheURL,
+            formulaURL: formulaURL,
+            caskURL: caskURL
+        )
+
+        // Not a forced refresh: the stale cache must still be rejected.
+        await store.load(installedPackages: [])
+
+        XCTAssertTrue(store.packages.contains { $0.name == "visual-studio-code" })
+        XCTAssertEqual(
+            try JSONDecoder().decode(CatalogSnapshot.self, from: Data(contentsOf: cacheURL)).version,
+            CatalogSnapshot.currentVersion
+        )
     }
 
     func testBrewDetectorFindsAppleSiliconPath() {
@@ -257,6 +375,229 @@ final class BreweryCoreTests: XCTestCase {
         XCTAssertTrue(store.directDependents(for: wget).isEmpty)
     }
 
+    func testCaskArtifactsIgnoreShapesThatCarryNoAppBundle() throws {
+        let decoder = JSONDecoder()
+
+        // Homebrew's real shapes: a pkg cask, an app whose entry is an object,
+        // and an interpolated path that cannot be resolved without brew.
+        let pkgOnly = Data(#"[{"pkg": ["Installer.pkg"]}, {"uninstall": [{"pkgutil": "com.example"}]}]"#.utf8)
+        XCTAssertNil(try decoder.decode(CaskArtifacts.self, from: pkgOnly).appBundleName)
+
+        let objectEntry = Data(#"[{"app": [{"target": "Bitcoin Core.app"}]}]"#.utf8)
+        XCTAssertEqual(try decoder.decode(CaskArtifacts.self, from: objectEntry).appBundleName, "Bitcoin Core.app")
+
+        let interpolated = Data(#"[{"app": ["$APPDIR/Nested.app"]}]"#.utf8)
+        XCTAssertNil(try decoder.decode(CaskArtifacts.self, from: interpolated).appBundleName)
+
+        let pathTarget = Data(#"[{"app": ["/Applications/Firefox.app"]}]"#.utf8)
+        XCTAssertEqual(try decoder.decode(CaskArtifacts.self, from: pathTarget).appBundleName, "Firefox.app")
+
+        let empty = Data("[]".utf8)
+        XCTAssertNil(try decoder.decode(CaskArtifacts.self, from: empty).appBundleName)
+    }
+
+    func testCatalogPackageRoundTripsAppBundleNameThroughTheCache() throws {
+        let package = CatalogPackage(
+            name: "vlc",
+            kind: .cask,
+            homepage: URL(string: "https://www.videolan.org/vlc/"),
+            appBundleName: "VLC.app"
+        )
+
+        let snapshot = CatalogSnapshot(fetchedAt: Date(timeIntervalSince1970: 0), packages: [package])
+        let decoded = try JSONDecoder().decode(CatalogSnapshot.self, from: JSONEncoder().encode(snapshot))
+
+        XCTAssertEqual(decoded.packages.first?.appBundleName, "VLC.app")
+    }
+
+    func testIconSourcesPreferAnInstalledAppBundle() throws {
+        let root = try makeTemporaryDirectory()
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let bundle = applications.appendingPathComponent("VLC.app", isDirectory: true)
+        try FileManager.default.createDirectory(at: bundle, withIntermediateDirectories: true)
+
+        let homepage = URL(string: "https://www.videolan.org/vlc/")
+
+        XCTAssertEqual(
+            PackageIconResolver.sources(
+                kind: .cask,
+                token: "vlc",
+                appBundleName: "VLC.app",
+                homepage: homepage,
+                applicationDirectories: [applications],
+                caskroomDirectories: []
+            ),
+            [.appBundle(bundle)]
+        )
+
+        // Not on disk: the homepage candidates are used instead.
+        let remote = PackageIconResolver.sources(
+            kind: .cask,
+            token: "vlc",
+            appBundleName: "Missing.app",
+            homepage: homepage,
+            applicationDirectories: [applications],
+            caskroomDirectories: []
+        )
+        XCTAssertEqual(remote, [
+            .remote(URL(string: "https://www.videolan.org/apple-touch-icon.png")!),
+            .remote(URL(string: "https://www.videolan.org/favicon.ico")!),
+            .remote(URL(string: "https://icons.duckduckgo.com/ip3/www.videolan.org.ico")!)
+        ])
+    }
+
+    func testCaskroomBeatsTheNameTheCaskDeclaresToday() throws {
+        // bartender ships "Bartender 5.app", but the cask now declares
+        // "Bartender 7.app". The Caskroom symlink still points at what is
+        // installed, and that is the icon the user expects to see.
+        let root = try makeTemporaryDirectory()
+        let applications = root.appendingPathComponent("Applications", isDirectory: true)
+        let installed = applications.appendingPathComponent("Bartender 5.app", isDirectory: true)
+        try FileManager.default.createDirectory(at: installed, withIntermediateDirectories: true)
+
+        let caskroom = root.appendingPathComponent("Caskroom", isDirectory: true)
+        let versionDirectory = caskroom
+            .appendingPathComponent("bartender", isDirectory: true)
+            .appendingPathComponent("5.2.4", isDirectory: true)
+        try FileManager.default.createDirectory(at: versionDirectory, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(
+            at: versionDirectory.appendingPathComponent("Bartender 5.app"),
+            withDestinationURL: installed
+        )
+
+        let sources = PackageIconResolver.sources(
+            kind: .cask,
+            token: "bartender",
+            appBundleName: "Bartender 7.app",
+            homepage: URL(string: "https://www.macbartender.com/"),
+            applicationDirectories: [applications],
+            caskroomDirectories: [caskroom]
+        )
+
+        XCTAssertEqual(sources, [.appBundle(installed.resolvingSymlinksInPath())])
+    }
+
+    func testCaskroomLinkPointingAtADeletedAppIsIgnored() throws {
+        let root = try makeTemporaryDirectory()
+        let caskroom = root.appendingPathComponent("Caskroom", isDirectory: true)
+        let versionDirectory = caskroom
+            .appendingPathComponent("ghost", isDirectory: true)
+            .appendingPathComponent("1.0", isDirectory: true)
+        try FileManager.default.createDirectory(at: versionDirectory, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(
+            at: versionDirectory.appendingPathComponent("Ghost.app"),
+            withDestinationURL: root.appendingPathComponent("Applications/Ghost.app")
+        )
+
+        XCTAssertNil(PackageIconResolver.installedAppBundleURL(token: "ghost", in: [caskroom]))
+    }
+
+    func testCaskroomDirectoryIsDerivedFromTheDetectedBrewPath() {
+        XCTAssertEqual(
+            PackageIconResolver.caskroomDirectory(forBrewAt: URL(fileURLWithPath: "/opt/homebrew/bin/brew")).path,
+            "/opt/homebrew/Caskroom"
+        )
+        XCTAssertEqual(
+            PackageIconResolver.caskroomDirectory(forBrewAt: URL(fileURLWithPath: "/Users/me/brew/bin/brew")).path,
+            "/Users/me/brew/Caskroom"
+        )
+    }
+
+    func testIconSourcesSkipFormulaeAndUnusableHomepages() {
+        // Formulae are command line tools, and keep their glyph.
+        XCTAssertTrue(PackageIconResolver.sources(
+            kind: .formula,
+            token: "wget",
+            appBundleName: nil,
+            homepage: URL(string: "https://www.gnu.org/software/wget/")
+        ).isEmpty)
+
+        XCTAssertTrue(PackageIconResolver.remoteIconCandidates(homepage: nil).isEmpty)
+        XCTAssertTrue(PackageIconResolver.remoteIconCandidates(homepage: URL(string: "ftp://example.com/x")).isEmpty)
+        XCTAssertTrue(PackageIconResolver.remoteIconCandidates(homepage: URL(fileURLWithPath: "/tmp/x")).isEmpty)
+    }
+
+    func testLocalAppBundleLookupRejectsPathTraversal() throws {
+        let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+        XCTAssertNil(PackageIconResolver.localAppBundleURL(forBundleNamed: "../Firefox.app", in: [directory]))
+        XCTAssertNil(PackageIconResolver.localAppBundleURL(forBundleNamed: "", in: [directory]))
+        XCTAssertNil(PackageIconResolver.installedAppBundleURL(token: "../../etc", in: [directory]))
+        XCTAssertNil(PackageIconResolver.installedAppBundleURL(token: "", in: [directory]))
+    }
+
+    func testIconCacheFileNamesDoNotCollideAcrossTokens() {
+        // Both sanitize to "cask-1password-7" before the hash is appended.
+        let first = IconDiskCache.sanitize("cask:1password@7")
+        let second = IconDiskCache.sanitize("cask:1password-7")
+
+        XCTAssertNotEqual(first, second)
+        XCTAssertFalse(first.contains(":"))
+        XCTAssertFalse(first.contains("@"))
+        // Stable across launches, or a cached icon is never found again.
+        XCTAssertEqual(first, IconDiskCache.sanitize("cask:1password@7"))
+    }
+
+    func testIconCacheDistinguishesHitsMissesAndExpiry() throws {
+        let directory = try makeTemporaryDirectory()
+        let cache = IconDiskCache(directory: directory, hitLifetime: 60, missLifetime: 60)
+
+        XCTAssertEqual(cache.load("cask:vlc"), .absent)
+
+        cache.store(Data([0x1, 0x2, 0x3]), for: "cask:vlc")
+        XCTAssertEqual(cache.load("cask:vlc"), .hit(Data([0x1, 0x2, 0x3])))
+
+        cache.storeMiss(for: "cask:ghost")
+        XCTAssertEqual(cache.load("cask:ghost"), .miss)
+
+        // Past its lifetime a miss is retried rather than honoured forever.
+        let expired = IconDiskCache(directory: directory, hitLifetime: 60, missLifetime: 60)
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date(timeIntervalSinceNow: -120)],
+            ofItemAtPath: expired.fileURL(for: "cask:ghost").path
+        )
+        XCTAssertEqual(expired.load("cask:ghost"), .absent)
+    }
+
+    func testIconValidatorRejectsNonImagesAndTinyImages() throws {
+        XCTAssertFalse(IconValidator.isUsableIcon(Data()))
+        // A 200 response carrying an error page is the common favicon failure.
+        XCTAssertFalse(IconValidator.isUsableIcon(Data("<!doctype html><html></html>".utf8)))
+
+        XCTAssertTrue(IconValidator.isUsableIcon(try pngData(side: 64)))
+        XCTAssertFalse(IconValidator.isUsableIcon(try pngData(side: 8)))
+    }
+
+    private func pngData(side: Int) throws -> Data {
+        let context = try XCTUnwrap(CGContext(
+            data: nil,
+            width: side,
+            height: side,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        context.setFillColor(CGColor(red: 0, green: 0, blue: 1, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: side, height: side))
+
+        let image = try XCTUnwrap(context.makeImage())
+        let output = NSMutableData()
+        let destination = try XCTUnwrap(
+            CGImageDestinationCreateWithData(output, "public.png" as CFString, 1, nil)
+        )
+        CGImageDestinationAddImage(destination, image, nil)
+        XCTAssertTrue(CGImageDestinationFinalize(destination))
+        return output as Data
+    }
+
+    private func makeTemporaryDirectory() throws -> URL {
+        let url = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("brewery-icon-test-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: url) }
+        return url
+    }
+
     private func fixture(_ name: String) throws -> Data {
         let url = try XCTUnwrap(Bundle.module.url(forResource: name, withExtension: "json"))
         return try Data(contentsOf: url)
@@ -277,6 +618,8 @@ private final class StubFileManager: FileManager {
 }
 
 private struct MockCatalogFetcher: CatalogFetching {
+    struct NotStubbed: Error {}
+
     var payloads: [URL: Data] = [:]
     var error: Error?
 
@@ -284,6 +627,9 @@ private struct MockCatalogFetcher: CatalogFetching {
         if let error {
             throw error
         }
-        return try XCTUnwrap(payloads[url])
+        // A URL the test did not stub stands in for a request that failed,
+        // which is what analytics does when brew.sh is unreachable.
+        guard let payload = payloads[url] else { throw NotStubbed() }
+        return payload
     }
 }

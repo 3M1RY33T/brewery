@@ -33,6 +33,7 @@ struct CaskCatalogItem: Decodable {
     let homepage: String?
     let version: String?
     let dependsOn: FlexibleDependencyMap?
+    let artifacts: CaskArtifacts?
 
     private enum CodingKeys: String, CodingKey {
         case token
@@ -43,11 +44,45 @@ struct CaskCatalogItem: Decodable {
         case homepage
         case version
         case dependsOn = "depends_on"
+        case artifacts
     }
 }
 
+/// One row of Homebrew's install analytics.
+struct AnalyticsItem: Decodable {
+    let formula: String?
+    let cask: String?
+    let count: String
+
+    var name: String? { formula ?? cask }
+
+    /// Counts arrive as display strings such as `"5,535,528"`.
+    var installs: Int {
+        Int(count.filter(\.isNumber)) ?? 0
+    }
+}
+
+struct AnalyticsPayload: Decodable {
+    let items: [AnalyticsItem]
+}
+
 enum CatalogPackageMapper {
-    static func formulaPackages(from data: Data) throws -> [CatalogPackage] {
+    /// Install counts keyed by package name, for ordering the browse shelves.
+    static func installCounts(from data: Data, kind: PackageKind) throws -> [String: Int] {
+        let payload = try JSONDecoder().decode(AnalyticsPayload.self, from: data)
+        var counts: [String: Int] = [:]
+        for item in payload.items {
+            guard let name = item.name else { continue }
+            // Analytics can list a name more than once; keep the largest.
+            counts[name] = max(counts[name] ?? 0, item.installs)
+        }
+        return counts
+    }
+
+    static func formulaPackages(
+        from data: Data,
+        popularity: [String: Int] = [:]
+    ) throws -> [CatalogPackage] {
         try JSONDecoder().decode([FormulaCatalogItem].self, from: data).map { formula in
             CatalogPackage(
                 name: formula.name,
@@ -57,12 +92,16 @@ enum CatalogPackageMapper {
                 homepage: formula.homepage.flatMap(URL.init(string:)),
                 version: formula.versions?.stable,
                 tap: formula.tap,
-                dependencies: formula.dependencies ?? []
+                dependencies: formula.dependencies ?? [],
+                popularity: popularity[formula.name] ?? 0
             )
         }
     }
 
-    static func caskPackages(from data: Data) throws -> [CatalogPackage] {
+    static func caskPackages(
+        from data: Data,
+        popularity: [String: Int] = [:]
+    ) throws -> [CatalogPackage] {
         try JSONDecoder().decode([CaskCatalogItem].self, from: data).map { cask in
             CatalogPackage(
                 name: cask.token,
@@ -72,7 +111,9 @@ enum CatalogPackageMapper {
                 homepage: cask.homepage.flatMap(URL.init(string:)),
                 version: cask.version,
                 tap: cask.tap,
-                dependencies: cask.dependsOn?.values.map(\.name).sorted() ?? []
+                dependencies: cask.dependsOn?.values.map(\.name).sorted() ?? [],
+                appBundleName: cask.artifacts?.appBundleName,
+                popularity: popularity[cask.token] ?? 0
             )
         }
     }

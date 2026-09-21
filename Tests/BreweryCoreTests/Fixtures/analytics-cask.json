@@ -1,0 +1,11 @@
+{
+  "category": "cask-install",
+  "total_items": 2,
+  "start_date": "2025-09-21",
+  "end_date": "2026-09-21",
+  "total_count": 500,
+  "items": [
+    { "number": 1, "cask": "vlc", "count": "400,000", "percent": "80.0" },
+    { "number": 2, "cask": "visual-studio-code", "count": "50", "percent": "0.01" }
+  ]
+}

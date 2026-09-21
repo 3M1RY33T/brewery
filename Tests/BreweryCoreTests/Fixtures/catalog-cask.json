@@ -14,7 +14,28 @@
       "cask": [
         "mono-mdk"
       ]
-    }
+    },
+    "artifacts": [
+      {
+        "uninstall": [
+          {
+            "quit": "com.microsoft.VSCode"
+          }
+        ]
+      },
+      {
+        "app": [
+          "Visual Studio Code.app"
+        ],
+        "target": "/Applications/Visual Studio Code.app"
+      },
+      {
+        "binary": [
+          "$APPDIR/Visual Studio Code.app/Contents/Resources/app/bin/code"
+        ],
+        "target": "$HOMEBREW_PREFIX/bin/code"
+      }
+    ]
   },
   {
     "token": "vlc",
@@ -28,6 +49,33 @@
     "version": "3.0.23",
     "depends_on": {
       "macos": {}
-    }
+    },
+    "artifacts": [
+      {
+        "app": [
+          {
+            "target": "VLC.app"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "token": "font-hack-nerd-font",
+    "full_token": "font-hack-nerd-font",
+    "tap": "homebrew/cask",
+    "name": [
+      "Hack Nerd Font (Hack)"
+    ],
+    "desc": "Developer targeted fonts with a high number of glyphs",
+    "homepage": "https://github.com/ryanoasis/nerd-fonts",
+    "version": "3.4.0",
+    "artifacts": [
+      {
+        "font": [
+          "HackNerdFont-Regular.ttf"
+        ]
+      }
+    ]
   }
 ]

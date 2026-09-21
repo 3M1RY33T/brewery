@@ -1,0 +1,18 @@
+{
+  "0": "BrewPackage",
+  "1": "String",
+  "2": "PackageNodeID",
+  "3": "CatalogStore",
+  "4": "LiveBrewService",
+  "5": "BrewDetectionReport",
+  "7": "BreweryCore",
+  "8": "IconDiskCache",
+  "9": "CatalogPackage",
+  "13": "README.md",
+  "14": "BreweryCoreTests",
+  "16": "BrewAction",
+  "19": "Package.swift",
+  "20": "build-app.sh",
+  "21": "run-app.sh",
+  "22": "CodingKeys"
+}

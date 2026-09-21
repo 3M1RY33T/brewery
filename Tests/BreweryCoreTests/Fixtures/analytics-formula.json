@@ -1,0 +1,11 @@
+{
+  "category": "install",
+  "total_items": 3,
+  "start_date": "2025-09-21",
+  "end_date": "2026-09-21",
+  "total_count": 1000,
+  "items": [
+    { "number": 1, "formula": "ripgrep", "count": "900,000", "percent": "90.0" },
+    { "number": 2, "formula": "wget", "count": "1,200", "percent": "0.12" }
+  ]
+}
