@@ -21,7 +21,7 @@ Brewery is not signed or notarized yet. On first launch macOS will refuse to ope
 
 ## Nothing runs without confirmation
 
-Update, install, upgrade, uninstall and cleanup all stop here first. The exact `brew` command is printed, and nothing executes until you press Run Command. Output is streamed into the command log on the Diagnostics page as it happens.
+Install, upgrade, uninstall and cleanup all stop here first. The exact `brew` command is printed, and nothing executes until you press Run Command. Output is streamed into the command log on the Diagnostics page as it happens.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="Docs/Screenshots/brewery-confirm-dark.png">

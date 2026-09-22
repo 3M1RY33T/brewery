@@ -24,9 +24,6 @@ struct ContentView: View {
         }
     }
     @State private var pendingAction: BrewAction?
-    @State private var installName = ""
-    @State private var installKind: PackageKind = .formula
-    @State private var showingInstallSheet = false
     @State private var selectedCatalogPackage: CatalogPackage?
 
     private let minimumDetailPaneWidth = 380.0
@@ -57,17 +54,6 @@ struct ContentView: View {
             } confirm: {
                 pendingAction = nil
                 Task { await store.perform(action) }
-            }
-        }
-        .sheet(isPresented: $showingInstallSheet) {
-            InstallSheet(name: $installName, kind: $installKind) {
-                showingInstallSheet = false
-            } confirm: {
-                let trimmed = installName.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty else { return }
-                showingInstallSheet = false
-                pendingAction = .install(name: trimmed, kind: installKind)
-                installName = ""
             }
         }
     }
@@ -114,41 +100,6 @@ struct ContentView: View {
                 }
             }
         }
-        .toolbar {
-            ToolbarItemGroup {
-                Button {
-                    Task { await store.refresh() }
-                } label: {
-                    Label("Refresh", systemImage: "arrow.clockwise")
-                }
-                .disabled(store.isRunningCommand)
-                .help("Refresh installed packages and status")
-
-                Button {
-                    pendingAction = .update
-                } label: {
-                    Label("Update", systemImage: "arrow.down.circle")
-                }
-                .disabled(store.isRunningCommand)
-                .help("Run brew update")
-
-                Button {
-                    showingInstallSheet = true
-                } label: {
-                    Label("Install", systemImage: "plus.circle")
-                }
-                .disabled(store.isRunningCommand)
-                .help("Install a formula or cask")
-
-                Button {
-                    pendingAction = .cleanup
-                } label: {
-                    Label("Cleanup", systemImage: "sparkles")
-                }
-                .disabled(store.isRunningCommand)
-                .help("Run brew cleanup")
-            }
-        }
         .onAppear {
             detailPaneWidth = clampedDetailPaneWidth
         }
@@ -187,7 +138,7 @@ struct ContentView: View {
 
     private var contentPane: some View {
         VStack(spacing: 0) {
-            if store.filter != .browse {
+            if store.filter == .library {
                 packageSearchHeader
                 Divider()
             }
@@ -199,7 +150,9 @@ struct ContentView: View {
                     store.selectPackage(node)
                 }
             } else if store.filter == .diagnostics {
-                DiagnosticsView()
+                DiagnosticsView { action in
+                    pendingAction = action
+                }
             } else {
                 InstalledPackagesView.library { action in
                     pendingAction = action
@@ -224,6 +177,14 @@ struct ContentView: View {
             Text(store.statusMessage)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
+
+            Button {
+                Task { await store.refresh() }
+            } label: {
+                Label("Refresh", systemImage: "arrow.clockwise")
+            }
+            .disabled(store.isRunningCommand)
+            .help("Reload installed packages and their status")
         }
         .padding(12)
     }

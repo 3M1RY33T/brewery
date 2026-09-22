@@ -6,6 +6,7 @@ import SwiftUI
 /// where you go when something needs explaining.
 struct DiagnosticsView: View {
     @EnvironmentObject private var store: PackageStore
+    let onAction: (BrewAction) -> Void
 
     var body: some View {
         VSplitView {
@@ -23,6 +24,14 @@ struct DiagnosticsView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
                 Spacer()
+                Button {
+                    onAction(.cleanup)
+                } label: {
+                    Label("Clean Up", systemImage: "sparkles")
+                }
+                .disabled(store.isRunningCommand)
+                .help("Run brew cleanup to remove stale downloads and old versions")
+
                 Button {
                     Task { await store.loadDiagnostics() }
                 } label: {
