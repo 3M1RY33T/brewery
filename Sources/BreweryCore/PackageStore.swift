@@ -31,8 +31,6 @@ public final class PackageStore: ObservableObject {
                 matchesFilter = package.kind == .formula
             case .casks:
                 matchesFilter = package.kind == .cask
-            case .outdated:
-                matchesFilter = package.outdated
             case .diagnostics:
                 matchesFilter = false
             }

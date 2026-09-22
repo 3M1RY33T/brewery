@@ -378,13 +378,15 @@ final class BreweryCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testPackageStoreFiltersOutdatedPackages() async {
+    func testLibraryLeadsWithOutdatedPackages() async {
         let store = PackageStore(service: MockBrewService())
         await store.refresh()
 
-        store.filter = .outdated
+        store.filter = .library
+        let ordered = store.filteredPackages.outdatedFirst()
 
-        XCTAssertEqual(store.filteredPackages.map(\.name), ["wget"])
+        XCTAssertEqual(ordered.first?.name, "wget", "the one outdated mock package leads")
+        XCTAssertTrue(ordered.dropFirst().allSatisfy { !$0.outdated })
     }
 
     @MainActor

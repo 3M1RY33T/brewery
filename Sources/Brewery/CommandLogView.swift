@@ -42,7 +42,7 @@ struct CommandLogView: View {
                     }
                 }
             }
-            .background(Color(nsColor: .textBackgroundColor))
+            .background(Color.cardBackground)
         }
     }
 

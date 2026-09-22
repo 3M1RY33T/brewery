@@ -21,7 +21,7 @@ Brewery is not signed or notarized yet. On first launch macOS will refuse to ope
 
 ## Nothing runs without confirmation
 
-Update, install, upgrade, uninstall and cleanup all stop here first. The exact `brew` command is printed, and nothing executes until you press Run Command. Output is streamed into the log at the bottom of the window as it happens.
+Update, install, upgrade, uninstall and cleanup all stop here first. The exact `brew` command is printed, and nothing executes until you press Run Command. Output is streamed into the command log on the Diagnostics page as it happens.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="Docs/Screenshots/brewery-confirm-dark.png">
@@ -65,7 +65,7 @@ Swift 5.9 or newer is only needed when building from source.
 - Show direct dependencies and dependents in the package detail pane.
 - Browse official Homebrew formulae and casks with an App Store-style catalog view.
 - Cache the browse catalog locally and use cached data when network refresh fails.
-- Provide sidebar views for the catalog, the installed library, installed formulae, installed casks, outdated packages, and diagnostics.
+- Provide sidebar views for the catalog, the installed library (outdated packages first), installed formulae, installed casks, and diagnostics.
 
 ## Build from source
 

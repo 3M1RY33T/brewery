@@ -69,7 +69,6 @@ public enum PackageFilter: String, CaseIterable, Identifiable {
     case library
     case formulae
     case casks
-    case outdated
     case diagnostics
 
     public var id: String { rawValue }
@@ -80,7 +79,6 @@ public enum PackageFilter: String, CaseIterable, Identifiable {
         case .library: return "Library"
         case .formulae: return "Formulae"
         case .casks: return "Casks"
-        case .outdated: return "Outdated"
         case .diagnostics: return "Diagnostics"
         }
     }

@@ -1,10 +1,22 @@
 import BreweryCore
 import SwiftUI
 
+/// Homebrew's own health checks, with the command log beneath them. The log
+/// used to sit under every page; it belongs with the diagnostics, which is
+/// where you go when something needs explaining.
 struct DiagnosticsView: View {
     @EnvironmentObject private var store: PackageStore
 
     var body: some View {
+        VSplitView {
+            report
+                .frame(minHeight: 180)
+            CommandLogView()
+                .frame(minHeight: 140, idealHeight: 240)
+        }
+    }
+
+    private var report: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Diagnostics")
@@ -53,7 +65,7 @@ struct DiagnosticsBlock: View {
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(10)
-                .background(Color(nsColor: .textBackgroundColor))
+                .background(Color.cardBackground)
                 .cornerRadius(6)
         }
     }

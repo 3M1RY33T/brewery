@@ -28,7 +28,6 @@ struct SidebarView: View {
         case .library: return "books.vertical"
         case .formulae: return "terminal"
         case .casks: return "macwindow"
-        case .outdated: return "exclamationmark.arrow.triangle.2.circlepath"
         case .diagnostics: return "stethoscope"
         }
     }

@@ -86,10 +86,6 @@ struct ContentView: View {
                 .frame(minWidth: 940)
             }
 
-            Divider()
-
-            CommandLogView()
-                .frame(height: 170)
         }
         .toolbar {
             ToolbarItemGroup {
@@ -148,10 +144,6 @@ struct ContentView: View {
                 DiagnosticsView()
             } else if store.filter == .casks {
                 CaskGridView { action in
-                    pendingAction = action
-                }
-            } else if store.filter == .outdated {
-                InstalledPackagesView.outdated { action in
                     pendingAction = action
                 }
             } else if store.filter == .library {

@@ -2,9 +2,9 @@ import BreweryCore
 import SwiftUI
 
 /// Installed packages split by kind the way Browse is: casks as a card row
-/// with a popup for the full grid, formulae as rows. Library shows everything
-/// installed; Outdated shows the subset with an upgrade waiting. Both are
-/// places to manage packages, so every card and row can upgrade or uninstall.
+/// with a popup for the full grid, formulae as rows. Anything with an upgrade
+/// waiting is listed first, which is what made a separate Outdated page
+/// redundant. Every card and row can upgrade or uninstall.
 struct InstalledPackagesView: View {
     @EnvironmentObject private var store: PackageStore
     let onAction: (BrewAction) -> Void
@@ -19,19 +19,9 @@ struct InstalledPackagesView: View {
     /// another, so it waits until the popup has gone.
     @State private var queuedAction: BrewAction?
 
-    // Anything needing attention leads. On Outdated that is everything, so
-    // the order is unchanged there; in the Library it floats upgrades to the top.
+    // Anything needing attention leads.
     private var casks: [BrewPackage] { store.filteredPackages.filter { $0.kind == .cask }.outdatedFirst() }
     private var formulae: [BrewPackage] { store.filteredPackages.filter { $0.kind == .formula }.outdatedFirst() }
-
-    static func outdated(onAction: @escaping (BrewAction) -> Void) -> InstalledPackagesView {
-        InstalledPackagesView(
-            onAction: onAction,
-            emptyTitle: "Everything is up to date",
-            emptySearchTitle: { "No outdated packages match \"\($0)\"" },
-            emptySymbol: "checkmark.circle"
-        )
-    }
 
     static func library(onAction: @escaping (BrewAction) -> Void) -> InstalledPackagesView {
         InstalledPackagesView(
@@ -127,10 +117,9 @@ struct InstalledPackagesView: View {
         }
     }
 
-    /// Upgrades the packages in this section that have an upgrade waiting.
-    /// On Outdated that is every one listed; in the Library it is the
-    /// subset, and the button says how many. With a search active it is the
-    /// filtered set, which is what "all" means on screen.
+    /// Upgrades the packages in this section that have an upgrade waiting,
+    /// and says how many that is. With a search active it is the filtered
+    /// set, which is what "all" means on screen.
     private func upgradeAllButton(for packages: [BrewPackage], kind: PackageKind) -> some View {
         let outdated = packages.filter(\.outdated)
         let everyListedIsOutdated = outdated.count == packages.count
