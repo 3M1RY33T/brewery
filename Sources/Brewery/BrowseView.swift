@@ -443,7 +443,7 @@ private struct FormulaRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(isSelected ? Color.accentColor.opacity(0.14) : Color.clear)
+        .selectionFill(isSelected)
         .contentShape(Rectangle())
         .onTapGesture(perform: open)
     }
@@ -495,10 +495,7 @@ private struct CatalogCard: View {
         .frame(minHeight: 190, alignment: .topLeading)
         .background(Color(nsColor: .textBackgroundColor))
         .cornerRadius(8)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
-        )
+        .selectionRing(isSelected, cornerRadius: 8)
         .contentShape(Rectangle())
         .onTapGesture(perform: open)
     }

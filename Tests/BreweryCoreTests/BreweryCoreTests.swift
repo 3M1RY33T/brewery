@@ -377,6 +377,27 @@ final class BreweryCoreTests: XCTestCase {
     }
 
     @MainActor
+    func testSelectingAPackageSwitchesToTheViewThatListsIt() async {
+        let store = PackageStore(service: MockBrewService())
+        await store.refresh()
+        XCTAssertEqual(store.filter, .browse, "the catalog is the landing page")
+
+        // Following a dependency link from Browse must land where the
+        // package is actually visible, which depends on its kind.
+        store.selectPackage(PackageNodeID(kind: .formula, name: "wget"))
+        XCTAssertEqual(store.filter, .formulae)
+        XCTAssertEqual(store.selectedPackage?.name, "wget")
+
+        store.selectPackage(PackageNodeID(kind: .cask, name: "visual-studio-code"))
+        XCTAssertEqual(store.filter, .casks)
+        XCTAssertEqual(store.selectedPackage?.name, "visual-studio-code")
+
+        // An unknown node changes nothing.
+        store.selectPackage(PackageNodeID(kind: .formula, name: "not-installed"))
+        XCTAssertEqual(store.filter, .casks)
+    }
+
+    @MainActor
     func testPackageStoreExposesDependencyGraph() async {
         let store = PackageStore(service: MockBrewService())
         await store.refresh()

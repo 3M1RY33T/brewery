@@ -30,7 +30,7 @@ Update, install, upgrade, uninstall and cleanup all stop here first. The exact `
 
 ## Browse the whole catalog
 
-Search every official formula and cask, filtered by type and by category. The catalog is cached locally, so it still opens when a network refresh fails.
+Search every official formula and cask, laid out as category shelves and ranked by Homebrew's own install counts. The catalog is cached locally, so it still opens when a network refresh fails.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="Docs/Screenshots/brewery-browse-dark.png">
@@ -65,7 +65,7 @@ Swift 5.9 or newer is only needed when building from source.
 - Show direct dependencies and dependents in the package detail pane.
 - Browse official Homebrew formulae and casks with an App Store-style catalog view.
 - Cache the browse catalog locally and use cached data when network refresh fails.
-- Provide sidebar filters for all packages, formulae, casks, outdated packages, pinned packages, and diagnostics.
+- Provide sidebar views for the catalog, installed formulae, installed casks, outdated packages, pinned packages, and diagnostics.
 
 ## Build from source
 

@@ -5,7 +5,7 @@ import Foundation
 public final class PackageStore: ObservableObject {
     @Published public private(set) var packages: [BrewPackage] = []
     @Published public private(set) var dependencyGraph: BrewDependencyGraph = .empty
-    @Published public var filter: PackageFilter = .all
+    @Published public var filter: PackageFilter = .browse
     @Published public var searchText: String = ""
     @Published public var selectedPackageID: BrewPackage.ID?
     @Published public private(set) var logEntries: [CommandLogEntry] = []
@@ -25,8 +25,6 @@ public final class PackageStore: ObservableObject {
             switch filter {
             case .browse:
                 matchesFilter = false
-            case .all:
-                matchesFilter = true
             case .formulae:
                 matchesFilter = package.kind == .formula
             case .casks:
@@ -117,10 +115,12 @@ public final class PackageStore: ObservableObject {
         packages.first { $0.nodeID == node }
     }
 
+    /// Selects an installed package and switches to the view that lists it,
+    /// so following a dependency link always lands somewhere it is visible.
     public func selectPackage(_ node: PackageNodeID) {
         guard dependencyGraph.contains(node), package(for: node) != nil else { return }
         selectedPackageID = node.id
-        filter = .all
+        filter = node.kind == .cask ? .casks : .formulae
     }
 
     private func runTrackedCommand(status: String, operation: @escaping () async throws -> Void) async {

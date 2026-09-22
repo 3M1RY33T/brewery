@@ -126,10 +126,7 @@ private struct InstalledCaskCard: View {
         .frame(minHeight: 200, alignment: .topLeading)
         .background(Color(nsColor: .textBackgroundColor))
         .cornerRadius(8)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
-        )
+        .selectionRing(isSelected, cornerRadius: 8)
         .contentShape(Rectangle())
         .onTapGesture(perform: select)
     }

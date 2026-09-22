@@ -8,6 +8,28 @@ extension Color {
     static func brewery(hue: Double, saturation: Double = 0.55, brightness: Double = 0.62) -> Color {
         Color(hue: hue, saturation: saturation, brightness: brightness)
     }
+
+    /// Selection is shown in neutral grey rather than the accent colour: the
+    /// page is full of tinted icons and gradients already, and a blue ring on
+    /// top of them read as one more thing shouting for attention.
+    static let selectionStroke = Color.primary.opacity(0.35)
+    static let selectionFill = Color.primary.opacity(0.08)
+}
+
+extension View {
+    /// The ring every selectable card draws, so selection looks the same on
+    /// a hero, a spotlight, a catalog card and an installed cask.
+    func selectionRing(_ isSelected: Bool, cornerRadius: CGFloat, lineWidth: CGFloat = 2) -> some View {
+        overlay(
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .strokeBorder(isSelected ? Color.selectionStroke : Color.clear, lineWidth: lineWidth)
+        )
+    }
+
+    /// The tint a selectable row uses.
+    func selectionFill(_ isSelected: Bool) -> some View {
+        background(isSelected ? Color.selectionFill : Color.clear)
+    }
 }
 
 /// The Install / Upgrade / Installed control, sized for dense shelves.
@@ -131,10 +153,7 @@ private struct HeroCard: View {
             )
         )
         .cornerRadius(14)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 3)
-        )
+        .selectionRing(isSelected, cornerRadius: 14, lineWidth: 3)
         .contentShape(Rectangle())
         .onTapGesture(perform: open)
     }
@@ -346,7 +365,7 @@ private struct ChartRow: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
-        .background(isSelected ? Color.accentColor.opacity(0.14) : Color.clear)
+        .selectionFill(isSelected)
         .contentShape(Rectangle())
         .onTapGesture(perform: open)
     }
@@ -417,7 +436,7 @@ private struct CompactCell: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .frame(height: 56)
-        .background(isSelected ? Color.accentColor.opacity(0.14) : Color.clear)
+        .selectionFill(isSelected)
         .contentShape(Rectangle())
         .onTapGesture(perform: open)
     }
@@ -515,10 +534,7 @@ private struct SpotlightCard: View {
             )
         )
         .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
-        )
+        .selectionRing(isSelected, cornerRadius: 12)
         .contentShape(Rectangle())
         .onTapGesture(perform: open)
     }
