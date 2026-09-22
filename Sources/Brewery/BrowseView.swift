@@ -14,9 +14,13 @@ struct BrowseView: View {
     let onAction: (BrewAction) -> Void
     let onSelectInstalled: (PackageNodeID) -> Void
 
+    @EnvironmentObject private var pinnedStore: PinnedStore
+
     /// The chip strip duplicates the category tiles, so it only shows once
     /// the tiles have scrolled out of view, and hides again on the way back.
     @State private var tilesAreOffscreen = false
+    /// Showing the pinned list in place of the shelves.
+    @State private var isShowingPinned = false
 
     private static let scrollSpace = "browse"
 
@@ -34,7 +38,7 @@ struct BrowseView: View {
 
             ScrollViewReader { proxy in
                 VStack(spacing: 0) {
-                    if !catalogStore.isSearching && tilesAreOffscreen {
+                    if !catalogStore.isSearching && !isShowingPinned && tilesAreOffscreen {
                         categoryStrip(proxy: proxy)
                         Divider()
                     }
@@ -42,6 +46,8 @@ struct BrowseView: View {
                     ScrollView {
                         if catalogStore.isSearching {
                             searchResults
+                        } else if isShowingPinned {
+                            pinnedResults
                         } else {
                             shelves(proxy: proxy)
                         }
@@ -63,6 +69,9 @@ struct BrowseView: View {
             selectDefaultPackageIfNeeded()
         }
         .onChange(of: catalogStore.searchText) { _ in
+            selectDefaultPackageIfNeeded()
+        }
+        .onChange(of: isShowingPinned) { _ in
             selectDefaultPackageIfNeeded()
         }
     }
@@ -96,6 +105,25 @@ struct BrowseView: View {
             Text(catalogStore.statusMessage)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
+
+            Button {
+                isShowingPinned.toggle()
+            } label: {
+                HStack(spacing: 5) {
+                    Label("Pinned", systemImage: isShowingPinned ? "pin.fill" : "pin")
+                    if pinnedStore.count > 0 {
+                        Text("\(pinnedStore.count)")
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 1)
+                            .background(isShowingPinned ? Color.white.opacity(0.25) : Color.chipBackground)
+                            .cornerRadius(5)
+                    }
+                }
+            }
+            .buttonStyle(.bordered)
+            .tint(isShowingPinned ? .accentColor : nil)
+            .help(isShowingPinned ? "Back to the catalog" : "Show the packages you have pinned")
 
             Button {
                 Task { await catalogStore.load(installedPackages: installedPackages, forceRefresh: true) }
@@ -230,6 +258,55 @@ struct BrowseView: View {
         }
     }
 
+    /// Everything pinned, casks as cards and formulae as rows, like search.
+    @ViewBuilder
+    private var pinnedResults: some View {
+        let pinned = pinnedStore.pinned(in: catalogStore.packages)
+        let casks = pinned.filter { $0.kind == .cask }
+        let formulae = pinned.filter { $0.kind == .formula }
+
+        if pinned.isEmpty {
+            VStack(spacing: 10) {
+                Image(systemName: "pin")
+                    .font(.largeTitle)
+                    .foregroundColor(.secondary)
+                Text("Nothing pinned yet")
+                    .font(.headline)
+                Text("Use the pin on any entry to keep it here.")
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 80)
+        } else {
+            LazyVStack(alignment: .leading, spacing: 30) {
+                ShelfHeader(title: "Pinned", systemImage: "pin.fill", subtitle: "\(pinned.count) packages")
+                    .padding(.horizontal, 16)
+
+                if !casks.isEmpty {
+                    CaskShelfRow(
+                        title: "Casks",
+                        packages: casks,
+                        total: casks.count,
+                        selectedPackage: $selectedPackage,
+                        action: handlePrimaryAction
+                    )
+                }
+
+                if !formulae.isEmpty {
+                    FormulaShelfList(
+                        title: "Formulae",
+                        packages: formulae,
+                        total: formulae.count,
+                        selectedPackage: $selectedPackage,
+                        action: handlePrimaryAction
+                    )
+                    .padding(.horizontal, 16)
+                }
+            }
+            .padding(.vertical, 16)
+        }
+    }
+
     // MARK: - Behaviour
 
     private func handlePrimaryAction(for package: CatalogPackage) {
@@ -251,6 +328,8 @@ struct BrowseView: View {
         if catalogStore.isSearching {
             let results = catalogStore.searchResults
             visible = results.casks + results.formulae
+        } else if isShowingPinned {
+            visible = pinnedStore.pinned(in: catalogStore.packages)
         } else {
             visible = catalogStore.sections.flatMap { $0.casks + $0.formulae }
         }
@@ -478,6 +557,7 @@ private struct FormulaRow: View {
 
             Spacer(minLength: 8)
 
+            PinButton(package: package)
             Button(package.installStatus.title, action: action)
                 .disabled(package.installStatus == .installed(outdated: false))
         }
@@ -509,6 +589,10 @@ private struct CatalogCard: View {
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
+
+                Spacer(minLength: 0)
+
+                PinButton(package: package)
             }
 
             Text(package.description ?? "No description available")
@@ -577,6 +661,8 @@ struct CatalogPackageDetailView: View {
                             }
                                 .disabled(package.installStatus == .installed(outdated: false))
 
+                            DetailPinButton(package: package)
+
                             if package.installStatus != .notInstalled {
                                 Button {
                                     onSelectInstalled(package.nodeID)
@@ -631,6 +717,22 @@ struct CatalogPackageDetailView: View {
             } else {
                 onSelectInstalled(package.nodeID)
             }
+        }
+    }
+}
+
+
+/// The pin as a labelled button, for the detail pane where there is room.
+private struct DetailPinButton: View {
+    @EnvironmentObject private var pinnedStore: PinnedStore
+    let package: CatalogPackage
+
+    var body: some View {
+        let isPinned = pinnedStore.isPinned(package.id)
+        Button {
+            pinnedStore.toggle(package.id)
+        } label: {
+            Label(isPinned ? "Unpin" : "Pin", systemImage: isPinned ? "pin.fill" : "pin")
         }
     }
 }

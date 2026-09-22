@@ -29,7 +29,6 @@ struct SidebarView: View {
         case .formulae: return "terminal"
         case .casks: return "macwindow"
         case .outdated: return "exclamationmark.arrow.triangle.2.circlepath"
-        case .pinned: return "pin"
         case .diagnostics: return "stethoscope"
         }
     }

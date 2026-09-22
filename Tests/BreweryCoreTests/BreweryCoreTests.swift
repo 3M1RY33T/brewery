@@ -387,6 +387,42 @@ final class BreweryCoreTests: XCTestCase {
         XCTAssertEqual(store.filteredPackages.map(\.name), ["wget"])
     }
 
+    @MainActor
+    func testPinnedStorePersistsAcrossInstances() {
+        let suite = "brewery-pinned-test-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
+
+        let store = PinnedStore(defaults: defaults)
+        XCTAssertTrue(store.isEmpty)
+
+        store.toggle("cask:vlc")
+        store.toggle("formula:wget")
+        XCTAssertEqual(store.count, 2)
+        XCTAssertTrue(store.isPinned("cask:vlc"))
+
+        store.toggle("cask:vlc")
+        XCTAssertFalse(store.isPinned("cask:vlc"))
+
+        // A fresh instance reads what the first one wrote.
+        let reloaded = PinnedStore(defaults: defaults)
+        XCTAssertEqual(reloaded.ids, ["formula:wget"])
+    }
+
+    @MainActor
+    func testPinnedStoreResolvesOnlyPackagesStillInTheCatalog() {
+        let defaults = UserDefaults(suiteName: "brewery-pinned-resolve-\(UUID().uuidString)")!
+        let store = PinnedStore(defaults: defaults)
+        store.toggle("formula:wget")
+        store.toggle("cask:gone-from-catalog")
+
+        let catalog = [
+            CatalogPackage(name: "wget", kind: .formula),
+            CatalogPackage(name: "vlc", kind: .cask)
+        ]
+        XCTAssertEqual(store.pinned(in: catalog).map(\.name), ["wget"])
+    }
+
     func testOutdatedFirstKeepsAlphabeticalOrderWithinEachGroup() {
         let packages = [
             BrewPackage(name: "a-fresh", kind: .formula),

@@ -65,6 +65,32 @@ struct InstallButton: View {
     }
 }
 
+/// Pins a catalog entry to the user's list, or removes it. Sits beside the
+/// install control in every layout so it is always in the same place.
+struct PinButton: View {
+    @EnvironmentObject private var pinnedStore: PinnedStore
+    let package: CatalogPackage
+    /// White on tinted surfaces such as the hero card, where the accent
+    /// colour would not read.
+    var onTint = false
+
+    private var isPinned: Bool { pinnedStore.isPinned(package.id) }
+
+    var body: some View {
+        Button {
+            pinnedStore.toggle(package.id)
+        } label: {
+            Image(systemName: isPinned ? "pin.fill" : "pin")
+                .font(.system(size: 13, weight: .medium))
+                .frame(width: 24, height: 24)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundColor(isPinned ? (onTint ? .white : .accentColor) : (onTint ? .white.opacity(0.7) : .secondary))
+        .help(isPinned ? "Unpin \(package.displayName)" : "Pin \(package.displayName)")
+    }
+}
+
 /// The App Store's "See All" affordance, as a reversible toggle.
 struct ShowMoreButton: View {
     let isExpanded: Bool
@@ -138,10 +164,14 @@ private struct HeroCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("MOST INSTALLED")
-                .font(.caption2.weight(.bold))
-                .tracking(1.1)
-                .foregroundColor(.white.opacity(0.75))
+            HStack {
+                Text("MOST INSTALLED")
+                    .font(.caption2.weight(.bold))
+                    .tracking(1.1)
+                    .foregroundColor(.white.opacity(0.75))
+                Spacer()
+                PinButton(package: package, onTint: true)
+            }
 
             Spacer(minLength: 10)
 
@@ -396,6 +426,7 @@ private struct ChartRow: View {
 
             Spacer(minLength: 6)
 
+            PinButton(package: package)
             InstallButton(package: package, compact: true, action: action)
         }
         .padding(.horizontal, 10)
@@ -466,6 +497,7 @@ private struct CompactCell: View {
 
             Spacer(minLength: 6)
 
+            PinButton(package: package)
             InstallButton(package: package, compact: true, action: action)
         }
         .padding(.horizontal, 10)
@@ -524,7 +556,11 @@ private struct SpotlightCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            PackageIconView(package: package, size: 56, cornerRadius: 13)
+            HStack(alignment: .top) {
+                PackageIconView(package: package, size: 56, cornerRadius: 13)
+                Spacer()
+                PinButton(package: package)
+            }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(package.displayName)

@@ -33,8 +33,6 @@ public final class PackageStore: ObservableObject {
                 matchesFilter = package.kind == .cask
             case .outdated:
                 matchesFilter = package.outdated
-            case .pinned:
-                matchesFilter = package.pinned
             case .diagnostics:
                 matchesFilter = false
             }
