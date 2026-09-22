@@ -14,13 +14,27 @@ struct BrowseView: View {
     let onAction: (BrewAction) -> Void
     let onSelectInstalled: (PackageNodeID) -> Void
 
+    /// The chip strip duplicates the category tiles, so it only shows once
+    /// the tiles have scrolled out of view, and hides again on the way back.
+    @State private var tilesAreOffscreen = false
+
+    private static let scrollSpace = "browse"
+
+    /// The scroll target for a shelf. Chips and tiles are also built with
+    /// `ForEach(sections)`, which gives them the section's id implicitly, so
+    /// `scrollTo(section.id)` had three candidates and the chip's own
+    /// horizontal scroll view answered first. Only the shelf carries this id.
+    private static func shelfID(for sectionID: String) -> String {
+        "shelf-" + sectionID
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             header
 
             ScrollViewReader { proxy in
                 VStack(spacing: 0) {
-                    if !catalogStore.isSearching {
+                    if !catalogStore.isSearching && tilesAreOffscreen {
                         categoryStrip(proxy: proxy)
                         Divider()
                     }
@@ -32,8 +46,18 @@ struct BrowseView: View {
                             shelves(proxy: proxy)
                         }
                     }
+                    .coordinateSpace(name: Self.scrollSpace)
                 }
+                .animation(.easeInOut(duration: 0.18), value: tilesAreOffscreen)
             }
+        }
+        .onPreferenceChange(TileGridFramePreference.self) { frame in
+            // LazyVStack stops reporting a child's preference once it leaves
+            // the viewport, so nil arrives at the exact moment the tiles
+            // scroll away and is the signal, not a gap in it. While
+            // searching the grid is absent too, but the strip is gated on
+            // that separately.
+            tilesAreOffscreen = frame.map { $0.maxY <= 0 } ?? true
         }
         .onChange(of: catalogStore.sections) { _ in
             selectDefaultPackageIfNeeded()
@@ -90,7 +114,7 @@ struct BrowseView: View {
                 ForEach(catalogStore.sections.filter { $0.category != .featured }) { section in
                     Button {
                         withAnimation {
-                            proxy.scrollTo(section.id, anchor: .top)
+                            proxy.scrollTo(Self.shelfID(for: section.id), anchor: .top)
                         }
                     } label: {
                         Label(section.category.title, systemImage: section.category.systemImage)
@@ -130,10 +154,18 @@ struct BrowseView: View {
             VStack(alignment: .leading, spacing: 12) {
                 ShelfHeader(title: "Categories", systemImage: "square.grid.2x2")
                 CategoryTileGrid(sections: subjects) { id in
-                    withAnimation { proxy.scrollTo(id, anchor: .top) }
+                    withAnimation { proxy.scrollTo(Self.shelfID(for: id), anchor: .top) }
                 }
             }
             .padding(.horizontal, 16)
+            .background(
+                GeometryReader { geometry in
+                    Color.clear.preference(
+                        key: TileGridFramePreference.self,
+                        value: geometry.frame(in: .named(Self.scrollSpace))
+                    )
+                }
+            )
 
             if let featured {
                 TopChartsShelf(
@@ -151,7 +183,7 @@ struct BrowseView: View {
                     selectedPackage: $selectedPackage,
                     action: handlePrimaryAction
                 )
-                .id(section.id)
+                .id(Self.shelfID(for: section.id))
             }
         }
         .padding(.bottom, 24)
@@ -229,6 +261,14 @@ struct BrowseView: View {
             return
         }
         selectedPackage = visible.first
+    }
+}
+
+/// Where the category tiles sit relative to the scroll view's visible area.
+private struct TileGridFramePreference: PreferenceKey {
+    static var defaultValue: CGRect? = nil
+    static func reduce(value: inout CGRect?, nextValue: () -> CGRect?) {
+        value = nextValue() ?? value
     }
 }
 
