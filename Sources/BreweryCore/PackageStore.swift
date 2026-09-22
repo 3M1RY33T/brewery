@@ -39,8 +39,10 @@ public final class PackageStore: ObservableObject {
         }
     }
 
+    /// Nil until the user picks something. Nothing is selected on the
+    /// user's behalf, because the info pane shows whenever this is set.
     public var selectedPackage: BrewPackage? {
-        packages.first { $0.id == selectedPackageID } ?? filteredPackages.first
+        packages.first { $0.id == selectedPackageID }
     }
 
     public func refresh() async {
@@ -53,9 +55,6 @@ public final class PackageStore: ObservableObject {
             let inventory = try await self.service.refreshInventory(onOutput: self.makeLogSink())
             self.packages = inventory.packages
             self.dependencyGraph = inventory.graph
-            if self.selectedPackageID == nil {
-                self.selectedPackageID = inventory.packages.first?.id
-            }
             self.statusMessage = "Loaded \(inventory.packages.count) packages"
         }
     }

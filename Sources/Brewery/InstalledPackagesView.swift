@@ -85,10 +85,6 @@ struct InstalledPackagesView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear(perform: selectFirstIfNeeded)
-        .onChange(of: store.filteredPackages) { _ in
-            selectFirstIfNeeded()
-        }
         .sheet(isPresented: $isShowingAllCasks, onDismiss: flushQueuedAction) {
             InstalledCasksSheet(casks: casks) { action in
                 queuedAction = action
@@ -168,14 +164,6 @@ struct InstalledPackagesView: View {
             }
             content()
         }
-    }
-
-    /// Keeps the detail pane on something that is actually in this view.
-    private func selectFirstIfNeeded() {
-        let visible = store.filteredPackages
-        guard !visible.isEmpty else { return }
-        guard !visible.contains(where: { $0.id == store.selectedPackageID }) else { return }
-        store.selectedPackageID = visible.first?.id
     }
 
     private var emptyState: some View {

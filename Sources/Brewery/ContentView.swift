@@ -6,8 +6,23 @@ struct ContentView: View {
     @EnvironmentObject private var store: PackageStore
     @StateObject private var catalogStore = CatalogStore()
     @AppStorage("packageDetailPaneWidth") private var detailPaneWidth = 420.0
-    /// The inspector is dismissable; closing it is remembered like its width.
-    @AppStorage("packageDetailPaneVisible") private var isDetailPaneVisible = true
+
+    /// The info pane exists exactly while something is selected: picking a
+    /// package opens it, closing it deselects the package.
+    private var isDetailPaneVisible: Bool {
+        switch store.filter {
+        case .browse: return selectedCatalogPackage != nil
+        case .library: return store.selectedPackage != nil
+        case .diagnostics: return false
+        }
+    }
+
+    private func closeDetailPane() {
+        withAnimation(.easeInOut(duration: 0.18)) {
+            selectedCatalogPackage = nil
+            store.selectedPackageID = nil
+        }
+    }
     @State private var pendingAction: BrewAction?
     @State private var installName = ""
     @State private var installKind: PackageKind = .formula
@@ -100,16 +115,6 @@ struct ContentView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.18)) { isDetailPaneVisible.toggle() }
-                } label: {
-                    Label("Package Info", systemImage: "sidebar.trailing")
-                }
-                .keyboardShortcut("i", modifiers: [.command, .option])
-                .help(isDetailPaneVisible ? "Hide package info (⌥⌘I)" : "Show package info (⌥⌘I)")
-            }
-
             ToolbarItemGroup {
                 Button {
                     Task { await store.refresh() }
@@ -166,9 +171,7 @@ struct ContentView: View {
             }
         }
         .overlay(alignment: .topTrailing) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.18)) { isDetailPaneVisible = false }
-            } label: {
+            Button(action: closeDetailPane) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 15))
                     .foregroundColor(.secondary)
@@ -176,7 +179,8 @@ struct ContentView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("Hide package info (⌥⌘I)")
+            .keyboardShortcut(.cancelAction)
+            .help("Close and deselect (Esc)")
             .padding(6)
         }
     }

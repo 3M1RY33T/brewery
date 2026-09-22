@@ -71,13 +71,7 @@ struct BrowseView: View {
             if let frame, frame.width > 32 { contentWidth = frame.width - 32 }
         }
         .onChange(of: catalogStore.sections) { _ in
-            selectDefaultPackageIfNeeded()
-        }
-        .onChange(of: catalogStore.searchText) { _ in
-            selectDefaultPackageIfNeeded()
-        }
-        .onChange(of: isShowingPinned) { _ in
-            selectDefaultPackageIfNeeded()
+            refreshSelection()
         }
     }
 
@@ -328,24 +322,13 @@ struct BrowseView: View {
         }
     }
 
-    /// Keeps the detail pane pointed at something that is actually on screen.
-    private func selectDefaultPackageIfNeeded() {
-        let visible: [CatalogPackage]
-        if catalogStore.isSearching {
-            let results = catalogStore.searchResults
-            visible = results.casks + results.formulae
-        } else if isShowingPinned {
-            visible = pinnedStore.pinned(in: catalogStore.packages)
-        } else {
-            visible = catalogStore.sections.flatMap { $0.casks + $0.formulae }
-        }
-
-        guard !visible.isEmpty else { return }
-        if let selectedPackage, let refreshed = visible.first(where: { $0.id == selectedPackage.id }) {
-            self.selectedPackage = refreshed
-            return
-        }
-        selectedPackage = visible.first
+    /// The selected package's install state can change under it when the
+    /// catalog merges a fresh inventory; swap in the current copy. Nothing is
+    /// ever selected on the user's behalf.
+    private func refreshSelection() {
+        guard let selectedPackage,
+              let refreshed = catalogStore.packages.first(where: { $0.id == selectedPackage.id }) else { return }
+        self.selectedPackage = refreshed
     }
 }
 

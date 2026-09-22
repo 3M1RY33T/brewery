@@ -438,6 +438,23 @@ final class BreweryCoreTests: XCTestCase {
     }
 
     @MainActor
+    func testNothingIsSelectedUntilTheUserPicksSomething() async {
+        let store = PackageStore(service: MockBrewService())
+        await store.refresh()
+
+        // The info pane shows whenever there is a selection, so a refresh
+        // must not invent one, and clearing it must stick.
+        XCTAssertNil(store.selectedPackage)
+        XCTAssertNil(store.selectedPackageID)
+
+        store.selectedPackageID = PackageNodeID(kind: .formula, name: "wget").id
+        XCTAssertEqual(store.selectedPackage?.name, "wget")
+
+        store.selectedPackageID = nil
+        XCTAssertNil(store.selectedPackage)
+    }
+
+    @MainActor
     func testLibraryListsEveryInstalledPackageOfBothKinds() async {
         let store = PackageStore(service: MockBrewService())
         await store.refresh()
