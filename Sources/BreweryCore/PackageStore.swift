@@ -25,6 +25,8 @@ public final class PackageStore: ObservableObject {
             switch filter {
             case .browse:
                 matchesFilter = false
+            case .library:
+                matchesFilter = true
             case .formulae:
                 matchesFilter = package.kind == .formula
             case .casks:

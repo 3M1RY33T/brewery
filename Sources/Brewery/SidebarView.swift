@@ -6,7 +6,7 @@ struct SidebarView: View {
 
     var body: some View {
         List {
-            Section("Library") {
+            Section("Homebrew") {
                 ForEach(PackageFilter.allCases) { filter in
                     Button {
                         store.filter = filter
@@ -25,6 +25,7 @@ struct SidebarView: View {
     private func icon(for filter: PackageFilter) -> String {
         switch filter {
         case .browse: return "square.grid.2x2"
+        case .library: return "books.vertical"
         case .formulae: return "terminal"
         case .casks: return "macwindow"
         case .outdated: return "exclamationmark.arrow.triangle.2.circlepath"

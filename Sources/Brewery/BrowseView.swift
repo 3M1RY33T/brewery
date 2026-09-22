@@ -121,7 +121,7 @@ struct BrowseView: View {
                             .font(.callout)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 7)
-                            .background(Color(nsColor: .controlBackgroundColor))
+                            .background(Color.chipBackground)
                             .cornerRadius(8)
                     }
                     .buttonStyle(.plain)
@@ -424,7 +424,7 @@ private struct FormulaShelfList: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .background(Color(nsColor: .textBackgroundColor))
+                    .background(Color.cardBackground)
                     .cornerRadius(8)
                 }
             }
@@ -533,7 +533,7 @@ private struct CatalogCard: View {
         }
         .padding(14)
         .frame(minHeight: 190, alignment: .topLeading)
-        .background(Color(nsColor: .textBackgroundColor))
+        .background(Color.cardBackground)
         .cornerRadius(8)
         .selectionRing(isSelected, cornerRadius: 8)
         .contentShape(Rectangle())

@@ -151,7 +151,11 @@ struct ContentView: View {
                     pendingAction = action
                 }
             } else if store.filter == .outdated {
-                OutdatedView { action in
+                InstalledPackagesView.outdated { action in
+                    pendingAction = action
+                }
+            } else if store.filter == .library {
+                InstalledPackagesView.library { action in
                     pendingAction = action
                 }
             } else {

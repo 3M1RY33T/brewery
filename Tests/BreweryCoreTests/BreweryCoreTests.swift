@@ -388,6 +388,20 @@ final class BreweryCoreTests: XCTestCase {
     }
 
     @MainActor
+    func testLibraryListsEveryInstalledPackageOfBothKinds() async {
+        let store = PackageStore(service: MockBrewService())
+        await store.refresh()
+
+        store.filter = .library
+        XCTAssertEqual(store.filteredPackages.count, store.packages.count)
+        XCTAssertTrue(store.filteredPackages.contains { $0.kind == .formula })
+        XCTAssertTrue(store.filteredPackages.contains { $0.kind == .cask })
+
+        store.searchText = "wget"
+        XCTAssertEqual(store.filteredPackages.map(\.name), ["wget"])
+    }
+
+    @MainActor
     func testSelectingAPackageSwitchesToTheViewThatListsIt() async {
         let store = PackageStore(service: MockBrewService())
         await store.refresh()

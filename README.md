@@ -65,7 +65,7 @@ Swift 5.9 or newer is only needed when building from source.
 - Show direct dependencies and dependents in the package detail pane.
 - Browse official Homebrew formulae and casks with an App Store-style catalog view.
 - Cache the browse catalog locally and use cached data when network refresh fails.
-- Provide sidebar views for the catalog, installed formulae, installed casks, outdated packages, pinned packages, and diagnostics.
+- Provide sidebar views for the catalog, the installed library, installed formulae, installed casks, outdated packages, pinned packages, and diagnostics.
 
 ## Build from source
 

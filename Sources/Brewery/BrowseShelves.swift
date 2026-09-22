@@ -14,6 +14,26 @@ extension Color {
     /// top of them read as one more thing shouting for attention.
     static let selectionStroke = Color.primary.opacity(0.35)
     static let selectionFill = Color.primary.opacity(0.08)
+
+    /// Card and list-container fill: a raised surface that stays distinct
+    /// from the page in either appearance. The system text background is the
+    /// same grey as the window background on macOS, and cards drawn with it
+    /// were only visible while the content area happened to sit on a vibrant
+    /// material; lose the vibrancy and every card vanished. Opaque rather
+    /// than a translucent tint so nested surfaces do not compound.
+    static let cardBackground = Color(nsColor: .dynamic(dark: 0.20, light: 1.0))
+    /// Small chips and count badges, a step brighter than a card.
+    static let chipBackground = Color(nsColor: .dynamic(dark: 0.27, light: 0.90))
+}
+
+extension NSColor {
+    /// An opaque grey that resolves per appearance.
+    static func dynamic(dark: CGFloat, light: CGFloat) -> NSColor {
+        NSColor(name: nil) { appearance in
+            let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            return NSColor(white: isDark ? dark : light, alpha: 1)
+        }
+    }
 }
 
 extension View {
@@ -251,7 +271,7 @@ struct CategoryTileGrid: View {
                     }
                     .padding(9)
                     .frame(maxWidth: .infinity)
-                    .background(Color(nsColor: .textBackgroundColor))
+                    .background(Color.cardBackground)
                     .cornerRadius(9)
                 }
                 .buttonStyle(.plain)
@@ -341,7 +361,7 @@ struct TopChartsShelf: View {
                     )
                 }
             }
-            .background(Color(nsColor: .textBackgroundColor))
+            .background(Color.cardBackground)
             .cornerRadius(10)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -489,7 +509,7 @@ struct SpotlightShelf: View {
                     )
                 }
             }
-            .background(Color(nsColor: .textBackgroundColor))
+            .background(Color.cardBackground)
             .cornerRadius(10)
         }
     }
@@ -542,7 +562,7 @@ private struct SpotlightCard: View {
             LinearGradient(
                 colors: [
                     Color.brewery(hue: tintHue, saturation: 0.30, brightness: 0.34),
-                    Color(nsColor: .textBackgroundColor)
+                    Color.cardBackground
                 ],
                 startPoint: .top,
                 endPoint: .bottom

@@ -120,11 +120,13 @@ struct InstalledCaskCard: View {
                         action(.upgrade(name: package.name, kind: package.kind))
                     }
                 }
+
+                PackageManagementMenu(package: package, action: action)
             }
         }
         .padding(14)
         .frame(minHeight: 200, alignment: .topLeading)
-        .background(Color(nsColor: .textBackgroundColor))
+        .background(Color.cardBackground)
         .cornerRadius(8)
         .selectionRing(isSelected, cornerRadius: 8)
         .contentShape(Rectangle())

@@ -1,21 +1,44 @@
 import BreweryCore
 import SwiftUI
 
-/// Outdated packages, split by kind the way Browse is: casks as cards,
-/// formulae as rows. Both are things you upgrade, but a cask has an icon and
-/// a name people recognise, while a formula is its token and its versions.
-struct OutdatedView: View {
+/// Installed packages split by kind the way Browse is: casks as a card row
+/// with a popup for the full grid, formulae as rows. Library shows everything
+/// installed; Outdated shows the subset with an upgrade waiting. Both are
+/// places to manage packages, so every card and row can upgrade or uninstall.
+struct InstalledPackagesView: View {
     @EnvironmentObject private var store: PackageStore
     let onAction: (BrewAction) -> Void
+    /// What to say when the list is empty, with and without a search.
+    let emptyTitle: String
+    let emptySearchTitle: (String) -> String
+    let emptySymbol: String
 
     @State private var isShowingAllCasks = false
-    /// An upgrade requested from inside the popup. The confirmation is a
+    /// An action requested from inside the popup. The confirmation is a
     /// sheet on the same window, and macOS will not stack one sheet on
     /// another, so it waits until the popup has gone.
     @State private var queuedAction: BrewAction?
 
     private var casks: [BrewPackage] { store.filteredPackages.filter { $0.kind == .cask } }
     private var formulae: [BrewPackage] { store.filteredPackages.filter { $0.kind == .formula } }
+
+    static func outdated(onAction: @escaping (BrewAction) -> Void) -> InstalledPackagesView {
+        InstalledPackagesView(
+            onAction: onAction,
+            emptyTitle: "Everything is up to date",
+            emptySearchTitle: { "No outdated packages match \"\($0)\"" },
+            emptySymbol: "checkmark.circle"
+        )
+    }
+
+    static func library(onAction: @escaping (BrewAction) -> Void) -> InstalledPackagesView {
+        InstalledPackagesView(
+            onAction: onAction,
+            emptyTitle: "Nothing installed yet",
+            emptySearchTitle: { "No installed packages match \"\($0)\"" },
+            emptySymbol: "books.vertical"
+        )
+    }
 
     var body: some View {
         Group {
@@ -50,7 +73,7 @@ struct OutdatedView: View {
                                 VStack(spacing: 0) {
                                     ForEach(Array(formulae.enumerated()), id: \.element.id) { index, package in
                                         if index > 0 { Divider() }
-                                        OutdatedFormulaRow(
+                                        InstalledFormulaRow(
                                             package: package,
                                             isSelected: store.selectedPackageID == package.id,
                                             dependencyCount: store.directDependencies(for: package).count,
@@ -60,7 +83,7 @@ struct OutdatedView: View {
                                         )
                                     }
                                 }
-                                .background(Color(nsColor: .textBackgroundColor))
+                                .background(Color.cardBackground)
                                 .cornerRadius(8)
                             }
                         }
@@ -75,7 +98,7 @@ struct OutdatedView: View {
             selectFirstIfNeeded()
         }
         .sheet(isPresented: $isShowingAllCasks, onDismiss: flushQueuedAction) {
-            OutdatedCasksSheet(casks: casks) { action in
+            InstalledCasksSheet(casks: casks) { action in
                 queuedAction = action
                 isShowingAllCasks = false
             }
@@ -102,16 +125,25 @@ struct OutdatedView: View {
         }
     }
 
-    /// Upgrades exactly the packages listed in this section. With a search
-    /// active that is the filtered set, which is what "all" means on screen.
+    /// Upgrades the packages in this section that have an upgrade waiting.
+    /// On Outdated that is every one listed; in the Library it is the
+    /// subset, and the button says how many. With a search active it is the
+    /// filtered set, which is what "all" means on screen.
     private func upgradeAllButton(for packages: [BrewPackage], kind: PackageKind) -> some View {
-        Button {
-            onAction(.upgradeAll(names: packages.map(\.name), kind: kind))
+        let outdated = packages.filter(\.outdated)
+        let everyListedIsOutdated = outdated.count == packages.count
+        return Button {
+            onAction(.upgradeAll(names: outdated.map(\.name), kind: kind))
         } label: {
-            Label("Upgrade All", systemImage: "arrow.up.circle")
+            Label(
+                everyListedIsOutdated ? "Upgrade All" : "Upgrade \(outdated.count) Outdated",
+                systemImage: "arrow.up.circle"
+            )
         }
-        .disabled(store.isRunningCommand)
-        .help("Run brew upgrade for every \(kind == .cask ? "cask" : "formula") listed here")
+        .disabled(store.isRunningCommand || outdated.isEmpty)
+        .help(outdated.isEmpty
+              ? "Every \(kind == .cask ? "cask" : "formula") listed here is up to date"
+              : "Run brew upgrade for the outdated \(kind == .cask ? "casks" : "formulae") listed here")
     }
 
     private func flushQueuedAction() {
@@ -136,7 +168,7 @@ struct OutdatedView: View {
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 2)
-                    .background(Color(nsColor: .controlBackgroundColor))
+                    .background(Color.chipBackground)
                     .cornerRadius(6)
 
                 Spacer(minLength: 8)
@@ -157,18 +189,51 @@ struct OutdatedView: View {
 
     private var emptyState: some View {
         VStack(spacing: 10) {
-            Image(systemName: "checkmark.circle")
+            Image(systemName: emptySymbol)
                 .font(.largeTitle)
                 .foregroundColor(.secondary)
-            Text(store.searchText.isEmpty ? "Everything is up to date" : "No outdated packages match \"\(store.searchText)\"")
+            Text(store.searchText.isEmpty ? emptyTitle : emptySearchTitle(store.searchText))
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
-/// One outdated formula: what it is, what it will become, and who depends on it.
-private struct OutdatedFormulaRow: View {
+/// Upgrade, when there is one, and uninstall, always. The upgrade also has
+/// its own button beside the version so the common action is one click; the
+/// menu is where the destructive one lives, behind a deliberate second step
+/// before the confirmation sheet adds a third.
+struct PackageManagementMenu: View {
+    let package: BrewPackage
+    let action: (BrewAction) -> Void
+
+    var body: some View {
+        Menu {
+            if package.outdated {
+                Button {
+                    action(.upgrade(name: package.name, kind: package.kind))
+                } label: {
+                    Label("Upgrade", systemImage: "arrow.up.circle")
+                }
+            }
+            Button(role: .destructive) {
+                action(.uninstall(name: package.name, kind: package.kind))
+            } label: {
+                Label("Uninstall", systemImage: "trash")
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .font(.system(size: 15))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Manage \(package.displayName)")
+    }
+}
+
+/// One installed formula: what it is, its versions, and who depends on it.
+private struct InstalledFormulaRow: View {
     let package: BrewPackage
     let isSelected: Bool
     let dependencyCount: Int
@@ -200,7 +265,7 @@ private struct OutdatedFormulaRow: View {
 
             Spacer(minLength: 8)
 
-            // Dependents matter most here: upgrading this changes what they run against.
+            // Dependents matter most here: changing this changes what they run against.
             Text("\(dependencyCount) deps · \(dependentCount) used by")
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -210,9 +275,13 @@ private struct OutdatedFormulaRow: View {
             InstalledVersionLabel(package: package)
                 .frame(minWidth: 150, alignment: .trailing)
 
-            Button("Upgrade") {
-                action(.upgrade(name: package.name, kind: package.kind))
+            if package.outdated {
+                Button("Upgrade") {
+                    action(.upgrade(name: package.name, kind: package.kind))
+                }
             }
+
+            PackageManagementMenu(package: package, action: action)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
@@ -222,13 +291,12 @@ private struct OutdatedFormulaRow: View {
     }
 }
 
-
-/// Every outdated cask at once, as the grid the Casks page uses.
-private struct OutdatedCasksSheet: View {
+/// Every cask in the section at once, as the grid the Casks page uses.
+private struct InstalledCasksSheet: View {
     @EnvironmentObject private var store: PackageStore
     @Environment(\.dismiss) private var dismiss
     let casks: [BrewPackage]
-    /// Upgrades go back to the owner, which closes this sheet before the
+    /// Actions go back to the owner, which closes this sheet before the
     /// confirmation can be shown.
     let action: (BrewAction) -> Void
 
@@ -239,14 +307,14 @@ private struct OutdatedCasksSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                Label("Outdated Casks", systemImage: "macwindow")
+                Label("Casks", systemImage: "macwindow")
                     .font(.title3.weight(.semibold))
                 Text("\(casks.count)")
                     .font(.caption.weight(.medium))
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 2)
-                    .background(Color(nsColor: .controlBackgroundColor))
+                    .background(Color.chipBackground)
                     .cornerRadius(6)
 
                 Spacer()

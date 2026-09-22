@@ -57,6 +57,7 @@ public struct BrewPackage: Identifiable, Equatable {
 
 public enum PackageFilter: String, CaseIterable, Identifiable {
     case browse
+    case library
     case formulae
     case casks
     case outdated
@@ -68,6 +69,7 @@ public enum PackageFilter: String, CaseIterable, Identifiable {
     public var title: String {
         switch self {
         case .browse: return "Browse"
+        case .library: return "Library"
         case .formulae: return "Formulae"
         case .casks: return "Casks"
         case .outdated: return "Outdated"
