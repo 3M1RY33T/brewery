@@ -1,21 +1,21 @@
 # Graph Report - brewery  (2026-09-21)
 
 ## Corpus Check
-- 42 files · ~225,982 words
+- 43 files · ~226,538 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 679 nodes · 1593 edges · 36 communities (33 shown, 3 thin omitted)
-- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 134 edges (avg confidence: 0.83)
+- 694 nodes · 1633 edges · 39 communities (34 shown, 5 thin omitted)
+- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 141 edges (avg confidence: 0.83)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7411b0e6`
+- Built from commit: `8597c4ce`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- CatalogSearch
+- Equatable
 - String
 - PackageNodeID
 - CatalogStore
@@ -24,45 +24,48 @@
 - CatalogCategory
 - BreweryCore
 - IconDiskCache
-- .sources
+- BreweryCoreTests
 - BrowseShelves.swift
 - PackageStore
-- CatalogPackage
+- CatalogSection
 - README.md
-- View
-- BreweryCoreTests
-- PackageIconView
-- TopChartsShelf
-- CatalogError
+- BrewPackage
+- CursorTrackingView
+- HeroCard
+- OutdatedView
+- Foundation
 - Package.swift
 - build-app.sh
 - run-app.sh
 - CodingKeys
 - InstalledCaskCard
-- BrowseView
-- .selectionRing
+- View
+- CGFloat
 - CodingKeys
-- .fixture
-- MockBrewService
+- CodingKeys
+- Decodable
 - BrewAction
 - ContentView
 - CommandLogEntry
-- .contentPane
-- .formulaPackages
+- PackageIconView
+- CatalogPackage
 - .body
-- BrewPackage
+- PackageFilter
+- CatalogShelfStyle
+- AnalyticsItem
+- .score
 
 ## God Nodes (most connected - your core abstractions)
 1. `CatalogPackage` - 61 edges
 2. `PackageNodeID` - 44 edges
 3. `BreweryCoreTests` - 44 edges
-4. `BrewPackage` - 39 edges
-5. `PackageStore` - 37 edges
+4. `BrewPackage` - 43 edges
+5. `PackageStore` - 38 edges
 6. `CodingKeys` - 34 edges
 7. `CatalogCategory` - 33 edges
-8. `CatalogStore` - 30 edges
-9. `BrewAction` - 28 edges
-10. `PackageIconView` - 25 edges
+8. `BrewAction` - 30 edges
+9. `CatalogStore` - 30 edges
+10. `PackageIconView` - 26 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `.visible` --references--> `CatalogSection`  [INFERRED]
@@ -71,123 +74,119 @@
   Sources/Brewery/BrowseView.swift → Sources/Brewery/PackageIconView.swift
 - `.body` --calls--> `PackageIconView`  [INFERRED]
   Sources/Brewery/BrowseView.swift → Sources/Brewery/PackageIconView.swift
-- `.body` --calls--> `PackageIconView`  [INFERRED]
-  Sources/Brewery/CaskGridView.swift → Sources/Brewery/PackageIconView.swift
-- `MockCatalogFetcher` --implements--> `CatalogFetching`  [EXTRACTED]
-  Tests/BreweryCoreTests/BreweryCoreTests.swift → Sources/BreweryCore/CatalogStore.swift
+- `StubFileManager` --references--> `String`  [EXTRACTED]
+  Tests/BreweryCoreTests/BreweryCoreTests.swift → Sources/BreweryCore/BrewDetector.swift
+- `.selectedPackage` --references--> `BrewPackage`  [INFERRED]
+  Sources/BreweryCore/PackageStore.swift → Sources/BreweryCore/BrewPackage.swift
 
 ## Import Cycles
 - None detected.
 
-## Communities (36 total, 3 thin omitted)
+## Communities (39 total, 5 thin omitted)
 
-### Community 0 - "CatalogSearch"
-Cohesion: 0.29
-Nodes (3): CatalogSearch, Bool, Int
+### Community 0 - "Equatable"
+Cohesion: 0.25
+Nodes (9): Equatable, CaskDependency, CaskInfo, FlexibleDependencyMap, FlexibleDependencyValue, FlexibleStringList, Decoder, CaskArtifacts (+1 more)
 
 ### Community 1 - "String"
-Cohesion: 0.05
-Nodes (58): CodingKey, Decodable, Equatable, FileManager, BrewDetectionReport, .isAvailable, BrewDetector, String (+50 more)
+Cohesion: 0.18
+Nodes (12): CodingKey, String, .nilIfEmpty, DynamicCodingKey, Int, BrewDiagnostics, CaskAppArtifact, CaskAppArtifactEntry (+4 more)
 
 ### Community 2 - "PackageNodeID"
-Cohesion: 0.12
-Nodes (18): Codable, Comparable, Hashable, KeyPath, .split, BrewDependencyGraph, BrewInventory, DependencyEdge (+10 more)
+Cohesion: 0.10
+Nodes (22): Codable, Comparable, Hashable, KeyPath, PackageKind, cask, formula, .id (+14 more)
 
 ### Community 3 - "CatalogStore"
-Cohesion: 0.24
-Nodes (7): ObservableObject, CatalogStore, .isSearching, .searchResults, Bool, TimeInterval, URL
+Cohesion: 0.07
+Nodes (30): Error, LocalizedError, ObservableObject, IconError, unusable, CatalogSnapshot, .isCurrent, Date (+22 more)
 
 ### Community 4 - "LiveBrewService"
-Cohesion: 0.11
-Nodes (19): Int32, JSONDecoder, BrewActionDisplay, BrewServiceError, brewNotFound, commandFailed, decodingFailed, .errorDescription (+11 more)
+Cohesion: 0.06
+Nodes (32): CoreGraphics, FileManager, Int32, JSONDecoder, MissingHomebrewView, .body, BrewDetectionReport, .isAvailable (+24 more)
 
 ### Community 5 - "BrowseView.swift"
-Cohesion: 0.17
-Nodes (18): .searchResults, CaskShelfRow, .body, CatalogCard, .body, CatalogShelf, .subtitle, FormulaRow (+10 more)
+Cohesion: 0.19
+Nodes (18): .searchResults, CaskShelfRow, .body, CatalogCard, .body, CatalogShelf, .body, .casks (+10 more)
 
 ### Community 6 - "CatalogCategory"
-Cohesion: 0.07
-Nodes (30): CatalogCategory, ai, .assignable, communication, data, design, developerTools, featured (+22 more)
+Cohesion: 0.08
+Nodes (24): CatalogCategory, ai, .assignable, communication, data, design, developerTools, featured (+16 more)
 
 ### Community 7 - "BreweryCore"
-Cohesion: 0.09
-Nodes (17): AppKit, BreweryCore, Context, CoreGraphics, ImageIO, NSEvent, NSTrackingArea, NSView (+9 more)
+Cohesion: 0.13
+Nodes (12): App, AppKit, BreweryCore, Scene, BreweryApp, DetailPaneResizeHandle, .body, DetailBlock (+4 more)
 
 ### Community 8 - "IconDiskCache"
-Cohesion: 0.09
-Nodes (22): Never, Sendable, NSImage, PackageIconLoader, .body, ResolvedIcon, appBundle, downloaded (+14 more)
+Cohesion: 0.10
+Nodes (22): ImageIO, Never, Sendable, .body, PackageIconLoader, ResolvedIcon, appBundle, downloaded (+14 more)
 
-### Community 9 - ".sources"
-Cohesion: 0.13
-Nodes (8): PackageIconResolver, PackageIconSource, appBundle, remote, Bool, FileManager, Set, URL
+### Community 9 - "BreweryCoreTests"
+Cohesion: 0.05
+Nodes (24): .columns, .split, BrewPackageMapper, CatalogPackageMapper, Data, Int, CatalogSearchResults, .isEmpty (+16 more)
 
 ### Community 10 - "BrowseShelves.swift"
-Cohesion: 0.16
-Nodes (21): CategoryTileGrid, .body, .canToggle, .collapsedCount, .columnCount, .visible, ChartRow, CompactCell (+13 more)
+Cohesion: 0.15
+Nodes (19): CategoryTileGrid, .body, .canToggle, .collapsedCount, .columnCount, .visible, ChartRow, CompactIconGrid (+11 more)
 
 ### Community 11 - "PackageStore"
-Cohesion: 0.35
-Nodes (5): AnyObject, BrewServicing, PackageStore, Sendable, Void
+Cohesion: 0.16
+Nodes (12): AnyObject, .contentPane, DiagnosticsBlock, .body, DiagnosticsView, .body, PackageTableView, BrewServicing (+4 more)
 
-### Community 12 - "CatalogPackage"
-Cohesion: 0.14
-Nodes (19): Encoder, Identifiable, CatalogInstallStatus, installed, notInstalled, .title, CatalogPackage, CatalogSearchResults (+11 more)
+### Community 12 - "CatalogSection"
+Cohesion: 0.18
+Nodes (9): Identifiable, CatalogInstallStatus, installed, notInstalled, .title, CatalogSection, .id, .isEmpty (+1 more)
 
 ### Community 13 - "README.md"
 Cohesion: 0.17
 Nodes (11): Browse the whole catalog, Build from source, Credits, Diagnostics, Features, Install, [Install Homebrew on macOS:](https://brew.sh/), Notes (+3 more)
 
-### Community 14 - "View"
-Cohesion: 0.23
-Nodes (12): View, CatalogPackageDetailView, .body, DependencyNodeList, .body, DetailBlock, .body, DetailRow (+4 more)
-
-### Community 15 - "BreweryCoreTests"
+### Community 14 - "BrewPackage"
 Cohesion: 0.18
-Nodes (4): Set, BreweryCoreTests, Int, XCTestCase
+Nodes (10): DependencyNodeList, .body, PackageDetailView, .body, Void, .body, BrewPackage, Bool (+2 more)
 
-### Community 16 - "PackageIconView"
-Cohesion: 0.13
-Nodes (19): .grid, .body, Color, .body, HeroCard, .body, .gradientStops, .body (+11 more)
+### Community 15 - "CursorTrackingView"
+Cohesion: 0.21
+Nodes (7): Context, NSEvent, NSTrackingArea, NSView, NSViewRepresentable, CursorTrackingView, ResizeCursorArea
 
-### Community 17 - "TopChartsShelf"
+### Community 16 - "HeroCard"
+Cohesion: 0.16
+Nodes (15): .grid, .body, Color, .body, HeroCard, .body, .gradientStops, .body (+7 more)
+
+### Community 17 - "OutdatedView"
 Cohesion: 0.22
-Nodes (9): ShelfHeader, .body, Int, TopChartsShelf, .body, .canShowLess, .canShowMore, .longest (+1 more)
-
-### Community 18 - "CatalogError"
-Cohesion: 0.15
-Nodes (11): Combine, LocalizedError, CatalogError, .errorDescription, httpStatus, noCachedCatalog, staleCacheFormat, CatalogFetching (+3 more)
+Nodes (10): Content, OutdatedFormulaRow, OutdatedView, .body, .casks, .emptyState, .formulae, Bool (+2 more)
 
 ### Community 22 - "CodingKeys"
 Cohesion: 0.07
 Nodes (27): CodingKeys, artifacts, casks, caveats, currentVersion, declaredDirectly, dependencies, dependsOn (+19 more)
 
 ### Community 23 - "InstalledCaskCard"
-Cohesion: 0.19
-Nodes (10): CaskGridView, .body, .emptyState, InstalledCaskCard, .body, .version, Bool, Int (+2 more)
+Cohesion: 0.20
+Nodes (11): CaskGridView, .body, .emptyState, InstalledCaskCard, .body, InstalledVersionLabel, .body, Bool (+3 more)
 
-### Community 24 - "BrowseView"
-Cohesion: 0.46
-Nodes (3): ScrollViewProxy, BrowseView, .body
+### Community 24 - "View"
+Cohesion: 0.40
+Nodes (6): ScrollViewProxy, HeroCarousel, View, BrowseView, .body, .header
 
-### Community 25 - ".selectionRing"
-Cohesion: 0.50
-Nodes (3): PreferenceKey, CGFloat, WidthPreference
+### Community 25 - "CGFloat"
+Cohesion: 0.38
+Nodes (5): PreferenceKey, CGFloat, WidthPreference, CGRect, TileGridFramePreference
 
 ### Community 26 - "CodingKeys"
 Cohesion: 0.20
 Nodes (10): CodingKeys, appBundleName, dependencies, description, displayName, homepage, kind, name (+2 more)
 
-### Community 27 - ".fixture"
-Cohesion: 0.29
-Nodes (7): Error, IconError, unusable, MockCatalogFetcher, NotStubbed, Data, URL
+### Community 27 - "CodingKeys"
+Cohesion: 0.15
+Nodes (13): CodingKeys, artifacts, dependencies, dependsOn, desc, fullName, fullToken, homepage (+5 more)
 
-### Community 28 - "MockBrewService"
-Cohesion: 0.20
-Nodes (5): BrewDiagnostics, MockBrewService, Bool, Sendable, URL
+### Community 28 - "Decodable"
+Cohesion: 0.29
+Nodes (11): Decodable, BrewInfoPayload, FormulaInfo, IgnoredJSONValue, Installed, OutdatedItem, OutdatedPayload, RuntimeDependency (+3 more)
 
 ### Community 29 - "BrewAction"
-Cohesion: 0.06
-Nodes (33): CaseIterable, Foundation, ConfirmationSheet, .body, InstallSheet, .body, Void, BrewAction (+25 more)
+Cohesion: 0.09
+Nodes (16): BrewAction, .arguments, cleanup, .commandDisplay, .id, install, .isMutating, .title (+8 more)
 
 ### Community 30 - "ContentView"
 Cohesion: 0.25
@@ -197,41 +196,49 @@ Nodes (9): Gesture, ContentView, .clampedDetailPaneWidth, .mainInterface, .packa
 Cohesion: 0.28
 Nodes (7): CommandLogView, .body, CommandLogEntry, Stream, status, stderr, stdout
 
-### Community 32 - ".contentPane"
-Cohesion: 0.25
-Nodes (6): .contentPane, DiagnosticsBlock, .body, DiagnosticsView, .body, PackageTableView
+### Community 32 - "PackageIconView"
+Cohesion: 0.21
+Nodes (10): NSImage, PackageIconView, .body, .glyph, .glyphColor, .isFont, Bool, CGFloat (+2 more)
 
-### Community 33 - ".formulaPackages"
-Cohesion: 0.39
-Nodes (4): CatalogPackageMapper, Data, Int, popularity
+### Community 33 - "CatalogPackage"
+Cohesion: 0.29
+Nodes (8): Encoder, CompactCell, .body, SpotlightShelf, .body, CatalogPackageDetailView, .body, CatalogPackage
 
 ### Community 34 - ".body"
-Cohesion: 0.25
-Nodes (7): App, Scene, BreweryApp, .body, .header, .body, Task
+Cohesion: 0.40
+Nodes (6): ConfirmationSheet, .body, InstallSheet, .body, Void, .body
 
-### Community 35 - "BrewPackage"
-Cohesion: 0.32
-Nodes (5): BrewPackage, Bool, URL, .filteredPackages, .selectedPackage
+### Community 35 - "PackageFilter"
+Cohesion: 0.20
+Nodes (10): CaseIterable, PackageFilter, browse, casks, diagnostics, formulae, .id, outdated (+2 more)
+
+### Community 36 - "CatalogShelfStyle"
+Cohesion: 0.40
+Nodes (4): CatalogShelfStyle, compactGrid, showcase, spotlight
+
+### Community 37 - "AnalyticsItem"
+Cohesion: 0.50
+Nodes (4): AnalyticsItem, .installs, .name, AnalyticsPayload
 
 ## Knowledge Gaps
-- **168 isolated node(s):** `PackageDescription`, `build-app.sh script`, `run-app.sh script`, `.body`, `.body` (+163 more)
+- **171 isolated node(s):** `PackageDescription`, `build-app.sh script`, `run-app.sh script`, `.body`, `.body` (+166 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `String` connect `String` to `CatalogSearch`, `PackageNodeID`, `LiveBrewService`, `BrowseView.swift`, `CatalogCategory`, `IconDiskCache`, `.sources`, `BrowseShelves.swift`, `PackageStore`, `CatalogPackage`, `View`, `BreweryCoreTests`, `PackageIconView`, `TopChartsShelf`, `CatalogError`, `CodingKeys`, `BrowseView`, `CodingKeys`, `.fixture`, `MockBrewService`, `BrewAction`, `ContentView`, `CommandLogEntry`, `.contentPane`, `.formulaPackages`, `BrewPackage`?**
-  _High betweenness centrality (0.512) - this node is a cross-community bridge._
-- **Why does `CatalogPackage` connect `CatalogPackage` to `CatalogSearch`, `.formulaPackages`, `PackageNodeID`, `String`, `CatalogStore`, `BrowseView.swift`, `BrowseShelves.swift`, `View`, `BreweryCoreTests`, `PackageIconView`, `TopChartsShelf`, `BrowseView`, `CodingKeys`, `BrewAction`, `ContentView`?**
-  _High betweenness centrality (0.137) - this node is a cross-community bridge._
-- **Why does `CodingKeys` connect `CodingKeys` to `String`?**
-  _High betweenness centrality (0.075) - this node is a cross-community bridge._
+- **Why does `String` connect `String` to `Equatable`, `PackageNodeID`, `CatalogStore`, `LiveBrewService`, `BrowseView.swift`, `CatalogCategory`, `BreweryCore`, `IconDiskCache`, `BreweryCoreTests`, `BrowseShelves.swift`, `PackageStore`, `CatalogSection`, `BrewPackage`, `OutdatedView`, `CodingKeys`, `View`, `CodingKeys`, `CodingKeys`, `Decodable`, `BrewAction`, `ContentView`, `CommandLogEntry`, `PackageIconView`, `CatalogPackage`, `.body`, `PackageFilter`, `AnalyticsItem`, `.score`?**
+  _High betweenness centrality (0.506) - this node is a cross-community bridge._
+- **Why does `CatalogPackage` connect `CatalogPackage` to `PackageIconView`, `Equatable`, `PackageNodeID`, `String`, `CatalogStore`, `BrowseView.swift`, `BreweryCoreTests`, `BrowseShelves.swift`, `CatalogSection`, `BrewPackage`, `HeroCard`, `Foundation`, `View`, `CodingKeys`, `ContentView`?**
+  _High betweenness centrality (0.132) - this node is a cross-community bridge._
+- **Why does `CodingKeys` connect `CodingKeys` to `Equatable`, `String`, `Decodable`?**
+  _High betweenness centrality (0.073) - this node is a cross-community bridge._
 - **Are the 11 inferred relationships involving `CatalogPackage` (e.g. with `.body` and `.body`) actually correct?**
   _`CatalogPackage` has 11 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 7 inferred relationships involving `PackageNodeID` (e.g. with `.inventory()` and `.refreshInventory()`) actually correct?**
   _`PackageNodeID` has 7 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `PackageDescription`, `build-app.sh script`, `run-app.sh script` to the rest of the system?**
-  _168 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `String` be split into smaller, more focused modules?**
-  _Cohesion score 0.050774526678141134 - nodes in this community are weakly interconnected._
+  _171 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `PackageNodeID` be split into smaller, more focused modules?**
+  _Cohesion score 0.10101010101010101 - nodes in this community are weakly interconnected._

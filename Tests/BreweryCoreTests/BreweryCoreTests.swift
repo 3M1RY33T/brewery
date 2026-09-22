@@ -11,6 +11,17 @@ final class BreweryCoreTests: XCTestCase {
         XCTAssertEqual(action.commandDisplay, "brew install --cask bad; rm -rf /")
     }
 
+    func testUpgradeAllNamesEveryPackageAsItsOwnArgument() {
+        let casks = BrewAction.upgradeAll(names: ["firefox", "vlc", "bad; rm -rf /"], kind: .cask)
+        XCTAssertEqual(casks.arguments, ["upgrade", "--cask", "firefox", "vlc", "bad; rm -rf /"])
+        XCTAssertEqual(casks.title, "Upgrade 3 Casks")
+
+        let formulae = BrewAction.upgradeAll(names: ["wget"], kind: .formula)
+        XCTAssertEqual(formulae.arguments, ["upgrade", "wget"])
+        XCTAssertEqual(formulae.title, "Upgrade 1 Formula")
+        XCTAssertEqual(formulae.commandDisplay, "brew upgrade wget")
+    }
+
     func testDecodesInstalledAndOutdatedPackages() throws {
         let decoder = JSONDecoder()
         let info = try decoder.decode(BrewInfoPayload.self, from: fixture("brew-info-v2-installed"))

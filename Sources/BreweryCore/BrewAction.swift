@@ -17,6 +17,9 @@ public enum PackageKind: String, Codable, CaseIterable, Identifiable {
 public enum BrewAction: Identifiable, Equatable {
     case update
     case upgrade(name: String, kind: PackageKind)
+    /// Every named package in one `brew upgrade`, so the confirmation shows
+    /// precisely which packages are about to change.
+    case upgradeAll(names: [String], kind: PackageKind)
     case install(name: String, kind: PackageKind)
     case uninstall(name: String, kind: PackageKind)
     case cleanup
@@ -27,6 +30,9 @@ public enum BrewAction: Identifiable, Equatable {
         switch self {
         case .update: return "Update Homebrew"
         case .upgrade(let name, _): return "Upgrade \(name)"
+        case .upgradeAll(let names, let kind):
+            let noun = kind == .cask ? (names.count == 1 ? "Cask" : "Casks") : (names.count == 1 ? "Formula" : "Formulae")
+            return "Upgrade \(names.count) \(noun)"
         case .install(let name, _): return "Install \(name)"
         case .uninstall(let name, _): return "Uninstall \(name)"
         case .cleanup: return "Clean Up Homebrew"
@@ -41,6 +47,8 @@ public enum BrewAction: Identifiable, Equatable {
             return ["update"]
         case .upgrade(let name, let kind):
             return kind == .cask ? ["upgrade", "--cask", name] : ["upgrade", name]
+        case .upgradeAll(let names, let kind):
+            return (kind == .cask ? ["upgrade", "--cask"] : ["upgrade"]) + names
         case .install(let name, let kind):
             return kind == .cask ? ["install", "--cask", name] : ["install", name]
         case .uninstall(let name, let kind):

@@ -26,21 +26,27 @@ struct OutdatedView: View {
                     LazyVStack(alignment: .leading, spacing: 28) {
                         if !casks.isEmpty {
                             section(title: "Casks", systemImage: "macwindow", count: casks.count, accessory: {
-                                Button {
-                                    isShowingAllCasks = true
-                                } label: {
-                                    Label("Show All", systemImage: "square.grid.2x2")
-                                        .font(.callout.weight(.medium))
+                                HStack(spacing: 14) {
+                                    Button {
+                                        isShowingAllCasks = true
+                                    } label: {
+                                        Label("Show All", systemImage: "square.grid.2x2")
+                                            .font(.callout.weight(.medium))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .foregroundColor(.accentColor)
+
+                                    upgradeAllButton(for: casks, kind: .cask)
                                 }
-                                .buttonStyle(.plain)
-                                .foregroundColor(.accentColor)
                             }) {
                                 caskRow
                             }
                         }
 
                         if !formulae.isEmpty {
-                            section(title: "Formulae", systemImage: "terminal", count: formulae.count, accessory: { EmptyView() }) {
+                            section(title: "Formulae", systemImage: "terminal", count: formulae.count, accessory: {
+                                upgradeAllButton(for: formulae, kind: .formula)
+                            }) {
                                 VStack(spacing: 0) {
                                     ForEach(Array(formulae.enumerated()), id: \.element.id) { index, package in
                                         if index > 0 { Divider() }
@@ -94,6 +100,18 @@ struct OutdatedView: View {
             }
             .padding(.vertical, 2)
         }
+    }
+
+    /// Upgrades exactly the packages listed in this section. With a search
+    /// active that is the filtered set, which is what "all" means on screen.
+    private func upgradeAllButton(for packages: [BrewPackage], kind: PackageKind) -> some View {
+        Button {
+            onAction(.upgradeAll(names: packages.map(\.name), kind: kind))
+        } label: {
+            Label("Upgrade All", systemImage: "arrow.up.circle")
+        }
+        .disabled(store.isRunningCommand)
+        .help("Run brew upgrade for every \(kind == .cask ? "cask" : "formula") listed here")
     }
 
     private func flushQueuedAction() {

@@ -15,13 +15,19 @@ struct ConfirmationSheet: View {
             Text("Brewery will run this Homebrew command:")
                 .foregroundColor(.secondary)
 
-            Text(action.commandDisplay)
-                .font(.system(.body, design: .monospaced))
-                .textSelection(.enabled)
-                .padding(10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(nsColor: .textBackgroundColor))
-                .cornerRadius(6)
+            // Upgrading everything names every package, so the command can
+            // run to many lines; cap the box rather than the dialog.
+            ScrollView {
+                Text(action.commandDisplay)
+                    .font(.system(.body, design: .monospaced))
+                    .textSelection(.enabled)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxHeight: 220)
+            .fixedSize(horizontal: false, vertical: true)
+            .background(Color(nsColor: .textBackgroundColor))
+            .cornerRadius(6)
 
             HStack {
                 Spacer()
