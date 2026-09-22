@@ -6,6 +6,8 @@ struct ContentView: View {
     @EnvironmentObject private var store: PackageStore
     @StateObject private var catalogStore = CatalogStore()
     @AppStorage("packageDetailPaneWidth") private var detailPaneWidth = 420.0
+    /// The inspector is dismissable; closing it is remembered like its width.
+    @AppStorage("packageDetailPaneVisible") private var isDetailPaneVisible = true
     @State private var pendingAction: BrewAction?
     @State private var installName = ""
     @State private var installKind: PackageKind = .formula
@@ -67,33 +69,47 @@ struct ContentView: View {
                             contentPane
                                 .frame(minWidth: 400, maxWidth: .infinity, maxHeight: .infinity)
 
-                            Divider()
+                            if isDetailPaneVisible {
+                                Divider()
 
-                            // Only as tall as its columns need; past half the
-                            // window it scrolls rather than pushing content up.
-                            // The cap goes inside fixedSize: the other way
-                            // round, frame(maxHeight:) makes the pane flexible
-                            // again and the stack hands it half the window.
-                            detailPane(isStacked: true)
-                                .frame(maxHeight: geometry.size.height * 0.5)
-                                .fixedSize(horizontal: false, vertical: true)
+                                // Only as tall as its columns need; past half the
+                                // window it scrolls rather than pushing content up.
+                                // The cap goes inside fixedSize: the other way
+                                // round, frame(maxHeight:) makes the pane flexible
+                                // again and the stack hands it half the window.
+                                detailPane(isStacked: true)
+                                    .frame(maxHeight: geometry.size.height * 0.5)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                     } else {
                         HStack(spacing: 0) {
                             contentPane
                                 .frame(minWidth: 400, maxWidth: .infinity)
 
-                            DetailPaneResizeHandle()
-                                .gesture(detailPaneResizeGesture(containerFrame: geometry.frame(in: .global)))
+                            if isDetailPaneVisible {
+                                DetailPaneResizeHandle()
+                                    .gesture(detailPaneResizeGesture(containerFrame: geometry.frame(in: .global)))
 
-                            detailPane(isStacked: false)
-                                .frame(width: clampedDetailPaneWidth)
+                                detailPane(isStacked: false)
+                                    .frame(width: clampedDetailPaneWidth)
+                            }
                         }
                     }
                 }
             }
         }
         .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.18)) { isDetailPaneVisible.toggle() }
+                } label: {
+                    Label("Package Info", systemImage: "sidebar.trailing")
+                }
+                .keyboardShortcut("i", modifiers: [.command, .option])
+                .help(isDetailPaneVisible ? "Hide package info (⌥⌘I)" : "Show package info (⌥⌘I)")
+            }
+
             ToolbarItemGroup {
                 Button {
                     Task { await store.refresh() }
@@ -133,20 +149,35 @@ struct ContentView: View {
         }
     }
 
-    @ViewBuilder
     private func detailPane(isStacked: Bool) -> some View {
-        if store.filter == .browse {
-            CatalogPackageDetailView(package: selectedCatalogPackage, isStacked: isStacked) { action in
-                pendingAction = action
-            } onSelectInstalled: { node in
-                store.selectPackage(node)
+        Group {
+            if store.filter == .browse {
+                CatalogPackageDetailView(package: selectedCatalogPackage, isStacked: isStacked) { action in
+                    pendingAction = action
+                } onSelectInstalled: { node in
+                    store.selectPackage(node)
+                }
+            } else {
+                PackageDetailView(package: store.selectedPackage, isStacked: isStacked) { node in
+                    store.selectPackage(node)
+                } onAction: { action in
+                    pendingAction = action
+                }
             }
-        } else {
-            PackageDetailView(package: store.selectedPackage, isStacked: isStacked) { node in
-                store.selectPackage(node)
-            } onAction: { action in
-                pendingAction = action
+        }
+        .overlay(alignment: .topTrailing) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.18)) { isDetailPaneVisible = false }
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 15))
+                    .foregroundColor(.secondary)
+                    .frame(width: 26, height: 26)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .help("Hide package info (⌥⌘I)")
+            .padding(6)
         }
     }
 
