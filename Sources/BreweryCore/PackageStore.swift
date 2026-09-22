@@ -27,10 +27,6 @@ public final class PackageStore: ObservableObject {
                 matchesFilter = false
             case .library:
                 matchesFilter = true
-            case .formulae:
-                matchesFilter = package.kind == .formula
-            case .casks:
-                matchesFilter = package.kind == .cask
             case .diagnostics:
                 matchesFilter = false
             }
@@ -113,12 +109,13 @@ public final class PackageStore: ObservableObject {
         packages.first { $0.nodeID == node }
     }
 
-    /// Selects an installed package and switches to the view that lists it,
-    /// so following a dependency link always lands somewhere it is visible.
+    /// Selects an installed package and switches to the Library, the one
+    /// view that lists every installed package, so following a dependency
+    /// link always lands somewhere it is visible.
     public func selectPackage(_ node: PackageNodeID) {
         guard dependencyGraph.contains(node), package(for: node) != nil else { return }
         selectedPackageID = node.id
-        filter = node.kind == .cask ? .casks : .formulae
+        filter = .library
     }
 
     private func runTrackedCommand(status: String, operation: @escaping () async throws -> Void) async {

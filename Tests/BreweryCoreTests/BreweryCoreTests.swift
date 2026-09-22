@@ -457,19 +457,21 @@ final class BreweryCoreTests: XCTestCase {
         await store.refresh()
         XCTAssertEqual(store.filter, .browse, "the catalog is the landing page")
 
-        // Following a dependency link from Browse must land where the
-        // package is actually visible, which depends on its kind.
+        // Following a dependency link from Browse lands in the Library,
+        // whichever kind the package is.
         store.selectPackage(PackageNodeID(kind: .formula, name: "wget"))
-        XCTAssertEqual(store.filter, .formulae)
+        XCTAssertEqual(store.filter, .library)
         XCTAssertEqual(store.selectedPackage?.name, "wget")
 
+        store.filter = .browse
         store.selectPackage(PackageNodeID(kind: .cask, name: "visual-studio-code"))
-        XCTAssertEqual(store.filter, .casks)
+        XCTAssertEqual(store.filter, .library)
         XCTAssertEqual(store.selectedPackage?.name, "visual-studio-code")
 
         // An unknown node changes nothing.
+        store.filter = .browse
         store.selectPackage(PackageNodeID(kind: .formula, name: "not-installed"))
-        XCTAssertEqual(store.filter, .casks)
+        XCTAssertEqual(store.filter, .browse)
     }
 
     @MainActor

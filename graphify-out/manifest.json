@@ -24,9 +24,9 @@
     "semantic_hash": ""
   },
   "Sources/Brewery/BrowseView.swift": {
-    "mtime": 1790050400.060396,
-    "seen": 1790050503.761038,
-    "ast_hash": "86042c1b0793259286399cfa48d8f10e",
+    "mtime": 1790055235.645527,
+    "seen": 1790055981.3160052,
+    "ast_hash": "dc800a6d8acd9c6e2a02b997394b1f04",
     "semantic_hash": ""
   },
   "Sources/Brewery/CommandLogView.swift": {
@@ -42,9 +42,9 @@
     "semantic_hash": ""
   },
   "Sources/Brewery/ContentView.swift": {
-    "mtime": 1790052195.0324225,
-    "seen": 1790052309.774831,
-    "ast_hash": "525d7fa1b242dac675aab0a98c297b41",
+    "mtime": 1790055967.8361845,
+    "seen": 1790055981.316007,
+    "ast_hash": "c5b2fa6c56504c36b4472dbe4723e178",
     "semantic_hash": ""
   },
   "Sources/Brewery/DiagnosticsView.swift": {
@@ -65,16 +65,10 @@
     "ast_hash": "148e3c235710dd83f4f0bf1b6824352a",
     "semantic_hash": ""
   },
-  "Sources/Brewery/PackageTableView.swift": {
-    "mtime": 1790033665.0351841,
-    "seen": 1790034500.759458,
-    "ast_hash": "754f0510cc71b0bb4630a3780b0b296a",
-    "semantic_hash": ""
-  },
   "Sources/Brewery/SidebarView.swift": {
-    "mtime": 1790049052.8305616,
-    "seen": 1790049066.503785,
-    "ast_hash": "24f54c20fa9d054502d9b3822a9a49a9",
+    "mtime": 1790055967.8358014,
+    "seen": 1790055981.3160121,
+    "ast_hash": "b60dc50deab6c04f8d62e74afb5a123a",
     "semantic_hash": ""
   },
   "Sources/BreweryCore/BrewAction.swift": {
@@ -102,9 +96,9 @@
     "semantic_hash": ""
   },
   "Sources/BreweryCore/BrewPackage.swift": {
-    "mtime": 1790049052.8299978,
-    "seen": 1790049066.503788,
-    "ast_hash": "451dc4cff6e6c8826e7a46e793c17c13",
+    "mtime": 1790055967.835122,
+    "seen": 1790055981.3160162,
+    "ast_hash": "f2ec645deea3a30e3639dbfd21d1488e",
     "semantic_hash": ""
   },
   "Sources/BreweryCore/BrewService.swift": {
@@ -144,15 +138,15 @@
     "semantic_hash": ""
   },
   "Sources/BreweryCore/PackageStore.swift": {
-    "mtime": 1790049052.8303988,
-    "seen": 1790049066.503795,
-    "ast_hash": "42ee7010da1217338d35f08aa880a6ce",
+    "mtime": 1790055967.8355289,
+    "seen": 1790055981.316023,
+    "ast_hash": "e346e4e778f1c6bbab3408e4a6282535",
     "semantic_hash": ""
   },
   "Tests/BreweryCoreTests/BreweryCoreTests.swift": {
-    "mtime": 1790049052.8321786,
-    "seen": 1790049066.5037959,
-    "ast_hash": "8de339b216db756a60551a9f149ae678",
+    "mtime": 1790055967.8370998,
+    "seen": 1790055981.316024,
+    "ast_hash": "f8cd552fc4c67e7014d447f13e429f30",
     "semantic_hash": ""
   },
   "Tests/BreweryCoreTests/Fixtures/brew-info-v2-cask-depends-on.json": {
@@ -186,9 +180,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1790049711.5985622,
-    "seen": 1790050503.7610629,
-    "ast_hash": "fad1d1e1fafb2173f7cbf10c155b79c7",
+    "mtime": 1790055967.8376768,
+    "seen": 1790055981.3160279,
+    "ast_hash": "59cbdffba0bc8c0daebc134778a573d4",
     "semantic_hash": ""
   },
   "Sources/Brewery/Resources/brewery-logo.png": {
@@ -269,12 +263,6 @@
     "ast_hash": "ff6159cf5a7e2c3d64f007c0bdf253a9",
     "semantic_hash": ""
   },
-  "Sources/Brewery/CaskGridView.swift": {
-    "mtime": 1790047050.7416308,
-    "seen": 1790048623.25182,
-    "ast_hash": "528c341e1a11ce9ea6e1c4d00bef0251",
-    "semantic_hash": ""
-  },
   "Sources/BreweryCore/CatalogCategory.swift": {
     "mtime": 1790033981.2358723,
     "seen": 1790034500.7594628,
@@ -300,9 +288,9 @@
     "semantic_hash": ""
   },
   "Sources/Brewery/BrowseShelves.swift": {
-    "mtime": 1790050400.0598745,
-    "seen": 1790050503.761038,
-    "ast_hash": "b646ad94acaeb131e975c8016160f881",
+    "mtime": 1790055760.558163,
+    "seen": 1790055981.3160052,
+    "ast_hash": "d1141e9145e05d8f9756758422a85f73",
     "semantic_hash": ""
   },
   "Sources/Brewery/InstalledPackagesView.swift": {
@@ -321,6 +309,12 @@
     "mtime": 1790052262.70722,
     "seen": 1790052309.774836,
     "ast_hash": "6915c76ba09d3aae54eed1770887623b",
+    "semantic_hash": ""
+  },
+  "Sources/Brewery/InstalledCaskCard.swift": {
+    "mtime": 1790055967.8364584,
+    "seen": 1790055981.316009,
+    "ast_hash": "a8efa598bf1c370265829451929cf586",
     "semantic_hash": ""
   }
 }

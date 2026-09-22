@@ -26,8 +26,6 @@ struct SidebarView: View {
         switch filter {
         case .browse: return "square.grid.2x2"
         case .library: return "books.vertical"
-        case .formulae: return "terminal"
-        case .casks: return "macwindow"
         case .diagnostics: return "stethoscope"
         }
     }

@@ -67,8 +67,6 @@ extension Array where Element == BrewPackage {
 public enum PackageFilter: String, CaseIterable, Identifiable {
     case browse
     case library
-    case formulae
-    case casks
     case diagnostics
 
     public var id: String { rawValue }
@@ -77,8 +75,6 @@ public enum PackageFilter: String, CaseIterable, Identifiable {
         switch self {
         case .browse: return "Browse"
         case .library: return "Library"
-        case .formulae: return "Formulae"
-        case .casks: return "Casks"
         case .diagnostics: return "Diagnostics"
         }
     }

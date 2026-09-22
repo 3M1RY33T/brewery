@@ -1,69 +1,8 @@
 import BreweryCore
 import SwiftUI
 
-/// Installed casks as a grid of cards.
-///
-/// Casks are apps, and now that each one carries its real icon a grid reads
-/// far better than a row of text. Formulae keep the table: they have no icon
-/// to anchor a card, and their columns are what matter.
-struct CaskGridView: View {
-    @EnvironmentObject private var store: PackageStore
-    let onAction: (BrewAction) -> Void
-
-    private let columns = [
-        GridItem(.adaptive(minimum: 230, maximum: 320), spacing: 14, alignment: .top)
-    ]
-
-    var body: some View {
-        Group {
-            if store.filteredPackages.isEmpty {
-                emptyState
-            } else {
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 14) {
-                        ForEach(store.filteredPackages) { package in
-                            InstalledCaskCard(
-                                package: package,
-                                isSelected: store.selectedPackageID == package.id,
-                                dependencyCount: store.directDependencies(for: package).count,
-                                dependentCount: store.directDependents(for: package).count,
-                                select: { store.selectedPackageID = package.id },
-                                action: { onAction($0) }
-                            )
-                        }
-                    }
-                    .padding(16)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear(perform: selectFirstCaskIfNeeded)
-        .onChange(of: store.filteredPackages) { _ in
-            selectFirstCaskIfNeeded()
-        }
-    }
-
-    /// Arriving here with a formula selected would leave no card highlighted
-    /// while the detail pane still described the formula.
-    private func selectFirstCaskIfNeeded() {
-        let visible = store.filteredPackages
-        guard !visible.isEmpty else { return }
-        guard !visible.contains(where: { $0.id == store.selectedPackageID }) else { return }
-        store.selectedPackageID = visible.first?.id
-    }
-
-    private var emptyState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "macwindow")
-                .font(.largeTitle)
-                .foregroundColor(.secondary)
-            Text(store.searchText.isEmpty ? "No casks installed" : "No casks match \"\(store.searchText)\"")
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
+/// A card for one installed cask: icon, description, dependency counts,
+/// version, and the upgrade and management controls.
 struct InstalledCaskCard: View {
     let package: BrewPackage
     let isSelected: Bool
