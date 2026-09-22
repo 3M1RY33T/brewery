@@ -55,6 +55,15 @@ public struct BrewPackage: Identifiable, Equatable {
     }
 }
 
+extension Array where Element == BrewPackage {
+    /// Packages with an upgrade waiting, ahead of the rest. Order within
+    /// each group is preserved, so an alphabetical list stays alphabetical
+    /// on both sides of the divide.
+    public func outdatedFirst() -> [BrewPackage] {
+        filter(\.outdated) + filter { !$0.outdated }
+    }
+}
+
 public enum PackageFilter: String, CaseIterable, Identifiable {
     case browse
     case library

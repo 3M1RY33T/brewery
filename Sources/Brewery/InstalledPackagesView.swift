@@ -19,8 +19,10 @@ struct InstalledPackagesView: View {
     /// another, so it waits until the popup has gone.
     @State private var queuedAction: BrewAction?
 
-    private var casks: [BrewPackage] { store.filteredPackages.filter { $0.kind == .cask } }
-    private var formulae: [BrewPackage] { store.filteredPackages.filter { $0.kind == .formula } }
+    // Anything needing attention leads. On Outdated that is everything, so
+    // the order is unchanged there; in the Library it floats upgrades to the top.
+    private var casks: [BrewPackage] { store.filteredPackages.filter { $0.kind == .cask }.outdatedFirst() }
+    private var formulae: [BrewPackage] { store.filteredPackages.filter { $0.kind == .formula }.outdatedFirst() }
 
     static func outdated(onAction: @escaping (BrewAction) -> Void) -> InstalledPackagesView {
         InstalledPackagesView(

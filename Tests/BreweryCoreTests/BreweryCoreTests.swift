@@ -387,6 +387,18 @@ final class BreweryCoreTests: XCTestCase {
         XCTAssertEqual(store.filteredPackages.map(\.name), ["wget"])
     }
 
+    func testOutdatedFirstKeepsAlphabeticalOrderWithinEachGroup() {
+        let packages = [
+            BrewPackage(name: "a-fresh", kind: .formula),
+            BrewPackage(name: "b-stale", kind: .formula, outdated: true),
+            BrewPackage(name: "c-fresh", kind: .formula),
+            BrewPackage(name: "d-stale", kind: .formula, outdated: true)
+        ]
+
+        XCTAssertEqual(packages.outdatedFirst().map(\.name), ["b-stale", "d-stale", "a-fresh", "c-fresh"])
+        XCTAssertEqual([BrewPackage]().outdatedFirst(), [])
+    }
+
     @MainActor
     func testLibraryListsEveryInstalledPackageOfBothKinds() async {
         let store = PackageStore(service: MockBrewService())
