@@ -60,9 +60,9 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
+    <string>1.0.0</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2</string>
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>NSHighResolutionCapable</key>
@@ -72,5 +72,9 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 </dict>
 </plist>
 PLIST
+
+# Ad-hoc sign the whole bundle so Info.plist and the icon are sealed; the
+# linker only signs the executable, which codesign --verify rejects.
+codesign --force --sign - "$APP_DIR"
 
 echo "Built $APP_DIR"
