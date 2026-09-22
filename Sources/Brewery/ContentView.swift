@@ -14,6 +14,9 @@ struct ContentView: View {
 
     private let minimumDetailPaneWidth = 380.0
     private let maximumDetailPaneWidth = 640.0
+    /// Below this much room right of the sidebar, a side pane starves the
+    /// content column, so the detail pane moves underneath instead.
+    private let stackDetailBelowWidth = 900.0
 
     var body: some View {
         Group {
@@ -23,6 +26,7 @@ struct ContentView: View {
                 mainInterface
             }
         }
+        .solidTitleBar()
         .task {
             await store.refresh()
             await catalogStore.load(installedPackages: store.packages)
@@ -58,34 +62,36 @@ struct ContentView: View {
                     .frame(minWidth: 160, idealWidth: 190, maxWidth: 240)
 
                 GeometryReader { geometry in
-                    HStack(spacing: 0) {
-                        contentPane
-                            .frame(minWidth: 560, maxWidth: .infinity)
+                    if geometry.size.width < stackDetailBelowWidth {
+                        VStack(spacing: 0) {
+                            contentPane
+                                .frame(minWidth: 400, maxWidth: .infinity, maxHeight: .infinity)
 
-                        DetailPaneResizeHandle()
-                            .gesture(detailPaneResizeGesture(containerFrame: geometry.frame(in: .global)))
+                            Divider()
 
-                        Group {
-                            if store.filter == .browse {
-                                CatalogPackageDetailView(package: selectedCatalogPackage) { action in
-                                    pendingAction = action
-                                } onSelectInstalled: { node in
-                                    store.selectPackage(node)
-                                }
-                            } else {
-                                PackageDetailView(package: store.selectedPackage) { node in
-                                    store.selectPackage(node)
-                                } onAction: { action in
-                                    pendingAction = action
-                                }
-                            }
+                            // Only as tall as its columns need; past half the
+                            // window it scrolls rather than pushing content up.
+                            // The cap goes inside fixedSize: the other way
+                            // round, frame(maxHeight:) makes the pane flexible
+                            // again and the stack hands it half the window.
+                            detailPane(isStacked: true)
+                                .frame(maxHeight: geometry.size.height * 0.5)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                        .frame(width: clampedDetailPaneWidth)
+                    } else {
+                        HStack(spacing: 0) {
+                            contentPane
+                                .frame(minWidth: 400, maxWidth: .infinity)
+
+                            DetailPaneResizeHandle()
+                                .gesture(detailPaneResizeGesture(containerFrame: geometry.frame(in: .global)))
+
+                            detailPane(isStacked: false)
+                                .frame(width: clampedDetailPaneWidth)
+                        }
                     }
                 }
-                .frame(minWidth: 940)
             }
-
         }
         .toolbar {
             ToolbarItemGroup {
@@ -124,6 +130,23 @@ struct ContentView: View {
         }
         .onAppear {
             detailPaneWidth = clampedDetailPaneWidth
+        }
+    }
+
+    @ViewBuilder
+    private func detailPane(isStacked: Bool) -> some View {
+        if store.filter == .browse {
+            CatalogPackageDetailView(package: selectedCatalogPackage, isStacked: isStacked) { action in
+                pendingAction = action
+            } onSelectInstalled: { node in
+                store.selectPackage(node)
+            }
+        } else {
+            PackageDetailView(package: store.selectedPackage, isStacked: isStacked) { node in
+                store.selectPackage(node)
+            } onAction: { action in
+                pendingAction = action
+            }
         }
     }
 

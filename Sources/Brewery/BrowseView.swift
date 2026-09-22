@@ -21,6 +21,9 @@ struct BrowseView: View {
     @State private var tilesAreOffscreen = false
     /// Showing the pinned list in place of the shelves.
     @State private var isShowingPinned = false
+    /// Width inside the page's horizontal padding, for shelves that choose
+    /// their column count.
+    @State private var contentWidth: CGFloat = 0
 
     private static let scrollSpace = "browse"
 
@@ -64,6 +67,8 @@ struct BrowseView: View {
             // searching the grid is absent too, but the strip is gated on
             // that separately.
             tilesAreOffscreen = frame.map { $0.maxY <= 0 } ?? true
+            // The measured block carries the page's 16pt side padding.
+            if let frame, frame.width > 32 { contentWidth = frame.width - 32 }
         }
         .onChange(of: catalogStore.sections) { _ in
             selectDefaultPackageIfNeeded()
@@ -181,7 +186,7 @@ struct BrowseView: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 ShelfHeader(title: "Categories", systemImage: "square.grid.2x2")
-                CategoryTileGrid(sections: subjects) { id in
+                CategoryTileGrid(sections: subjects, availableWidth: contentWidth) { id in
                     withAnimation { proxy.scrollTo(Self.shelfID(for: id), anchor: .top) }
                 }
             }
@@ -199,6 +204,7 @@ struct BrowseView: View {
                 TopChartsShelf(
                     casks: featured.casks,
                     formulae: featured.formulae,
+                    availableWidth: contentWidth,
                     selectedPackage: $selectedPackage,
                     action: handlePrimaryAction
                 )
@@ -627,6 +633,9 @@ private struct CatalogCard: View {
 
 struct CatalogPackageDetailView: View {
     let package: CatalogPackage?
+    /// Under the content rather than beside it: wide and short, so the
+    /// facts sit beside the header instead of below it.
+    var isStacked = false
     let action: (BrewAction) -> Void
     let onSelectInstalled: (PackageNodeID) -> Void
 
@@ -634,58 +643,26 @@ struct CatalogPackageDetailView: View {
         VStack(alignment: .leading, spacing: 0) {
             if let package {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack(alignment: .top, spacing: 14) {
-                            PackageIconView(package: package, size: 72, cornerRadius: 12)
-
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(package.displayName)
-                                    .font(.title2)
-                                    .fontWeight(.semibold)
-                                    .lineLimit(2)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                Text(package.name)
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(2)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                Text(package.description ?? "No description available")
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-
-                        HStack {
-                            Button {
-                                handlePrimaryAction(for: package)
-                            } label: {
-                                Text(package.installStatus.title)
-                            }
-                                .disabled(package.installStatus == .installed(outdated: false))
-
-                            DetailPinButton(package: package)
-
-                            if package.installStatus != .notInstalled {
-                                Button {
-                                    onSelectInstalled(package.nodeID)
-                                } label: {
-                                    Label("Open Installed", systemImage: "arrow.right.circle")
+                    Group {
+                        if isStacked {
+                            HStack(alignment: .top, spacing: 28) {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    heading(for: package)
+                                    actions(for: package)
                                 }
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+                                VStack(alignment: .leading, spacing: 16) {
+                                    facts(for: package)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
                             }
-                        }
-
-                        DetailRow(label: "Type", value: package.kind.title)
-                        DetailRow(label: "Version", value: package.version ?? "Unknown")
-                        DetailRow(label: "Tap", value: package.tap ?? "Unknown")
-
-                        if let homepage = package.homepage {
-                            Link(destination: homepage) {
-                                Label(homepage.absoluteString, systemImage: "link")
-                                    .lineLimit(3)
-                                    .fixedSize(horizontal: false, vertical: true)
+                        } else {
+                            VStack(alignment: .leading, spacing: 16) {
+                                heading(for: package)
+                                actions(for: package)
+                                facts(for: package)
                             }
-                        }
-
-                        if !package.dependencies.isEmpty {
-                            DetailBlock(label: "Dependencies", text: package.dependencies.prefix(24).joined(separator: ", "))
                         }
                     }
                     .padding(16)
@@ -705,6 +682,66 @@ struct CatalogPackageDetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    private func heading(for package: CatalogPackage) -> some View {
+                        HStack(alignment: .top, spacing: 14) {
+                            PackageIconView(package: package, size: 72, cornerRadius: 12)
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(package.displayName)
+                                    .font(.title2)
+                                    .fontWeight(.semibold)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Text(package.name)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Text(package.description ?? "No description available")
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+    }
+
+    private func actions(for package: CatalogPackage) -> some View {
+        HStack {
+            Button {
+                handlePrimaryAction(for: package)
+            } label: {
+                Text(package.installStatus.title)
+            }
+                .disabled(package.installStatus == .installed(outdated: false))
+
+            DetailPinButton(package: package)
+
+            if package.installStatus != .notInstalled {
+                Button {
+                    onSelectInstalled(package.nodeID)
+                } label: {
+                    Label("Open Installed", systemImage: "arrow.right.circle")
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func facts(for package: CatalogPackage) -> some View {
+        DetailRow(label: "Type", value: package.kind.title)
+        DetailRow(label: "Version", value: package.version ?? "Unknown")
+        DetailRow(label: "Tap", value: package.tap ?? "Unknown")
+
+        if let homepage = package.homepage {
+            Link(destination: homepage) {
+                Label(homepage.absoluteString, systemImage: "link")
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+
+        if !package.dependencies.isEmpty {
+            DetailBlock(label: "Dependencies", text: package.dependencies.prefix(24).joined(separator: ", "))
+        }
     }
 
     private func handlePrimaryAction(for package: CatalogPackage) {

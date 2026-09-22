@@ -229,20 +229,24 @@ private struct HeroCard: View {
 /// The App Store's Categories page: coloured tiles that jump to a shelf.
 struct CategoryTileGrid: View {
     let sections: [CatalogSection]
+    /// The width this grid has to work with, measured by the page. A
+    /// GeometryReader behind the grid itself never reported a size here,
+    /// so the page hands it down instead.
+    let availableWidth: CGFloat
     let jump: (String) -> Void
 
     /// Rows shown before the rest folds away behind the toggle.
     static let collapsedRows = 2
-    private static let minimumTileWidth: CGFloat = 150
+    /// Wide enough for "Developer Tools" beside its icon without truncating.
+    private static let minimumTileWidth: CGFloat = 176
     private static let spacing: CGFloat = 10
 
     @State private var isExpanded = false
-    @State private var availableWidth: CGFloat = 0
 
     /// Column count for the width we actually have, so "two rows" is exact
     /// rather than a guess that breaks when the window is resized.
     private var columnCount: Int {
-        guard availableWidth > 0 else { return 5 }
+        guard availableWidth > 0 else { return 4 }
         let fit = (availableWidth + Self.spacing) / (Self.minimumTileWidth + Self.spacing)
         return max(2, Int(fit))
     }
@@ -264,12 +268,6 @@ struct CategoryTileGrid: View {
                 }
             }
         }
-        .background(
-            GeometryReader { geometry in
-                Color.clear.preference(key: WidthPreference.self, value: geometry.size.width)
-            }
-        )
-        .onPreferenceChange(WidthPreference.self) { availableWidth = $0 }
     }
 
     private var grid: some View {
@@ -310,19 +308,14 @@ struct CategoryTileGrid: View {
     }
 }
 
-private struct WidthPreference: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
-
 // MARK: - Top charts
 
 /// Two numbered charts side by side, ranked by real install counts.
 struct TopChartsShelf: View {
     let casks: [CatalogPackage]
     let formulae: [CatalogPackage]
+    /// Measured by the page; see `CategoryTileGrid.availableWidth`.
+    let availableWidth: CGFloat
     @Binding var selectedPackage: CatalogPackage?
     let action: (CatalogPackage) -> Void
 
@@ -336,6 +329,10 @@ struct TopChartsShelf: View {
     private var canShowMore: Bool { visibleCount < longest }
     private var canShowLess: Bool { visibleCount > Self.pageSize }
 
+    /// Two charts side by side need this much before names stop truncating.
+    private static let sideBySideWidth: CGFloat = 680
+    private var isSideBySide: Bool { availableWidth == 0 || availableWidth >= Self.sideBySideWidth }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             ShelfHeader(
@@ -344,9 +341,16 @@ struct TopChartsShelf: View {
                 subtitle: "Ranked by installs over the last year"
             )
 
-            HStack(alignment: .top, spacing: 14) {
-                chart(title: "Casks", packages: Array(casks.prefix(visibleCount)))
-                chart(title: "Formulae", packages: Array(formulae.prefix(visibleCount)))
+            if isSideBySide {
+                HStack(alignment: .top, spacing: 14) {
+                    chart(title: "Casks", packages: Array(casks.prefix(visibleCount)))
+                    chart(title: "Formulae", packages: Array(formulae.prefix(visibleCount)))
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 18) {
+                    chart(title: "Casks", packages: Array(casks.prefix(visibleCount)))
+                    chart(title: "Formulae", packages: Array(formulae.prefix(visibleCount)))
+                }
             }
 
             if canShowMore || canShowLess {

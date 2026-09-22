@@ -11,11 +11,12 @@ struct BreweryApp: App {
             ContentView()
                 .environmentObject(store)
                 .environmentObject(pinnedStore)
-                .frame(minWidth: 1080, minHeight: 720)
+                .frame(minWidth: 720, minHeight: 560)
                 .task {
                     PackageIconLoader.shared.configure(brewPath: store.service.brewPath)
                 }
         }
+        .windowToolbarStyle(.unified(showsTitle: true))
         .commands {
             CommandGroup(after: .appInfo) {
                 Button("Refresh Packages") {

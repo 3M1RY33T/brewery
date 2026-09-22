@@ -5,6 +5,9 @@ struct PackageDetailView: View {
     @EnvironmentObject private var store: PackageStore
 
     let package: BrewPackage?
+    /// Under the content rather than beside it: wide and short, so the
+    /// sections sit in two columns instead of one long scroll.
+    var isStacked = false
     let onSelectPackage: (PackageNodeID) -> Void
     let onAction: (BrewAction) -> Void
 
@@ -12,11 +15,31 @@ struct PackageDetailView: View {
         VStack(alignment: .leading, spacing: 0) {
             if let package {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        header(for: package)
-                        actions(for: package)
-                        metadata(for: package)
-                        graphSections(for: package)
+                    Group {
+                        if isStacked {
+                            HStack(alignment: .top, spacing: 28) {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    header(for: package)
+                                    actions(for: package)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+                                VStack(alignment: .leading, spacing: 16) {
+                                    metadata(for: package)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
+
+                                graphSections(for: package)
+                                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                            }
+                        } else {
+                            VStack(alignment: .leading, spacing: 16) {
+                                header(for: package)
+                                actions(for: package)
+                                metadata(for: package)
+                                graphSections(for: package)
+                            }
+                        }
                     }
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
