@@ -64,7 +64,7 @@ struct CaskGridView: View {
     }
 }
 
-private struct InstalledCaskCard: View {
+struct InstalledCaskCard: View {
     let package: BrewPackage
     let isSelected: Bool
     let dependencyCount: Int
@@ -111,7 +111,7 @@ private struct InstalledCaskCard: View {
                 .lineLimit(1)
 
             HStack(spacing: 8) {
-                version
+                InstalledVersionLabel(package: package)
 
                 Spacer(minLength: 0)
 
@@ -130,9 +130,15 @@ private struct InstalledCaskCard: View {
         .contentShape(Rectangle())
         .onTapGesture(perform: select)
     }
+}
 
-    @ViewBuilder
-    private var version: some View {
+/// `installed → current` in orange when an upgrade is waiting, otherwise just
+/// the installed version. Shared by the cask card and the formula row so an
+/// outdated package looks the same whichever it is.
+struct InstalledVersionLabel: View {
+    let package: BrewPackage
+
+    var body: some View {
         if package.outdated, let current = package.currentVersion {
             HStack(spacing: 4) {
                 Text(package.installedVersion ?? "Unknown")

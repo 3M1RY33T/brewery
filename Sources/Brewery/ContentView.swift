@@ -150,6 +150,10 @@ struct ContentView: View {
                 CaskGridView { action in
                     pendingAction = action
                 }
+            } else if store.filter == .outdated {
+                OutdatedView { action in
+                    pendingAction = action
+                }
             } else {
                 PackageTableView()
             }
