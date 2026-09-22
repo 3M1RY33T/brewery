@@ -59,10 +59,10 @@ struct ContentView: View {
 
     private var mainInterface: some View {
         VStack(spacing: 0) {
-            HSplitView {
-                SidebarView()
-                    .frame(minWidth: 160, idealWidth: 190, maxWidth: 240)
+            NavigationBar()
+            Divider()
 
+            Group {
                 GeometryReader { geometry in
                     if geometry.size.width < stackDetailBelowWidth {
                         VStack(spacing: 0) {
