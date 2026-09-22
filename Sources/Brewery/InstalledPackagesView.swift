@@ -49,7 +49,7 @@ struct InstalledPackagesView: View {
                                             .font(.callout.weight(.medium))
                                     }
                                     .buttonStyle(.plain)
-                                    .foregroundColor(.accentColor)
+                                    .foregroundColor(.primary)
 
                                     upgradeAllButton(for: casks, kind: .cask)
                                 }

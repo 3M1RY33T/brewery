@@ -165,7 +165,7 @@ struct ContentView: View {
         HStack {
             TextField("Search packages", text: $store.searchText)
                 .textFieldStyle(.roundedBorder)
-                .frame(maxWidth: 320)
+                .frame(maxWidth: 360)
 
             Spacer()
 
@@ -187,6 +187,7 @@ struct ContentView: View {
             .help("Reload installed packages and their status")
         }
         .padding(12)
+        .background(Color(nsColor: .controlBackgroundColor))
     }
 
     private func detailPaneResizeGesture(containerFrame: CGRect) -> some Gesture {
