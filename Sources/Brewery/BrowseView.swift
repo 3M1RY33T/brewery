@@ -543,6 +543,8 @@ private struct FormulaRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
+            PinButton(package: package)
+
             PackageIconView(package: package, size: 26, cornerRadius: 6)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -563,7 +565,6 @@ private struct FormulaRow: View {
 
             Spacer(minLength: 8)
 
-            PinButton(package: package)
             Button(package.installStatus.title, action: action)
                 .disabled(package.installStatus == .installed(outdated: false))
         }

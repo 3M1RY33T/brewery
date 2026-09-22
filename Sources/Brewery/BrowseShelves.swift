@@ -102,7 +102,7 @@ struct ShowMoreButton: View {
                 .font(.callout.weight(.medium))
         }
         .buttonStyle(.plain)
-        .foregroundColor(.accentColor)
+        .foregroundColor(.primary)
     }
 }
 
@@ -115,6 +115,7 @@ struct ShelfHeader: View {
         VStack(alignment: .leading, spacing: 2) {
             Label(title, systemImage: systemImage)
                 .font(.title2.weight(.semibold))
+                .imageScale(.large)
             if let subtitle {
                 Text(subtitle)
                     .font(.subheadline)
@@ -238,8 +239,8 @@ struct CategoryTileGrid: View {
     /// Rows shown before the rest folds away behind the toggle.
     static let collapsedRows = 2
     /// Wide enough for "Developer Tools" beside its icon without truncating.
-    private static let minimumTileWidth: CGFloat = 176
-    private static let spacing: CGFloat = 10
+    private static let minimumTileWidth: CGFloat = 204
+    private static let spacing: CGFloat = 12
 
     @State private var isExpanded = false
 
@@ -266,6 +267,7 @@ struct CategoryTileGrid: View {
                 ShowMoreButton(isExpanded: isExpanded) {
                     withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
                 }
+                .frame(maxWidth: .infinity)
             }
         }
     }
@@ -278,29 +280,29 @@ struct CategoryTileGrid: View {
                 Button {
                     jump(section.id)
                 } label: {
-                    HStack(spacing: 9) {
+                    HStack(spacing: 12) {
                         Image(systemName: section.category.systemImage)
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: 19, weight: .semibold))
                             .foregroundColor(.white)
-                            .frame(width: 30, height: 30)
+                            .frame(width: 40, height: 40)
                             .background(Color.brewery(hue: section.category.tintHue))
-                            .cornerRadius(7)
+                            .cornerRadius(9)
 
-                        VStack(alignment: .leading, spacing: 1) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(section.category.title)
-                                .font(.callout.weight(.medium))
+                                .font(.body.weight(.semibold))
                                 .lineLimit(1)
-                            Text("\(section.caskTotal + section.formulaTotal)")
-                                .font(.caption2)
+                            Text("\(section.caskTotal + section.formulaTotal) packages")
+                                .font(.caption)
                                 .foregroundColor(.secondary)
                         }
 
                         Spacer(minLength: 0)
                     }
-                    .padding(9)
+                    .padding(12)
                     .frame(maxWidth: .infinity)
                     .background(Color.cardBackground)
-                    .cornerRadius(9)
+                    .cornerRadius(11)
                 }
                 .buttonStyle(.plain)
             }
@@ -369,11 +371,11 @@ struct TopChartsShelf: View {
                             }
                         }
                     }
-                    Spacer()
                     Text("\(min(visibleCount, longest)) of \(longest)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
+                .frame(maxWidth: .infinity)
             }
         }
     }
@@ -411,6 +413,8 @@ private struct ChartRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
+            // The rank keeps the leading edge here; the pin goes to the
+            // trailing side so the numbers read as a column.
             Text("\(rank)")
                 .font(.system(.callout, design: .rounded).weight(.semibold))
                 .foregroundColor(.secondary)
@@ -430,8 +434,8 @@ private struct ChartRow: View {
 
             Spacer(minLength: 6)
 
-            PinButton(package: package)
             InstallButton(package: package, compact: true, action: action)
+            PinButton(package: package)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
@@ -487,6 +491,8 @@ private struct CompactCell: View {
 
     var body: some View {
         HStack(spacing: 10) {
+            PinButton(package: package)
+
             PackageIconView(package: package, size: 36, cornerRadius: 8)
 
             VStack(alignment: .leading, spacing: 1) {
@@ -501,7 +507,6 @@ private struct CompactCell: View {
 
             Spacer(minLength: 6)
 
-            PinButton(package: package)
             InstallButton(package: package, compact: true, action: action)
         }
         .padding(.horizontal, 10)
