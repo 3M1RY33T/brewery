@@ -137,8 +137,8 @@ struct BrowseView: View {
 
             if let featured {
                 TopChartsShelf(
-                    casks: Array(featured.casks.prefix(10)),
-                    formulae: Array(featured.formulae.prefix(10)),
+                    casks: featured.casks,
+                    formulae: featured.formulae,
                     selectedPackage: $selectedPackage,
                     action: handlePrimaryAction
                 )

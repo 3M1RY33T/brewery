@@ -160,6 +160,18 @@ final class BreweryCoreTests: XCTestCase {
         XCTAssertEqual(media?.casks.first?.name, "cask-0")
     }
 
+    func testFeaturedCarriesEnoughForTheChartsWhileSubjectShelvesStayCapped() {
+        let packages = (0..<150).map {
+            CatalogPackage(name: "app-\($0)", kind: .cask, description: "Video player", popularity: 150 - $0)
+        }
+
+        let sections = CatalogSearch.sections(packages, caskLimit: 16, featuredLimit: 100)
+
+        XCTAssertEqual(sections.first { $0.category == .featured }?.casks.count, 100)
+        XCTAssertEqual(sections.first { $0.category == .media }?.casks.count, 16)
+        XCTAssertEqual(sections.first { $0.category == .media }?.caskTotal, 150)
+    }
+
     func testEveryPackageLandsOnExactlyOneSubjectShelf() throws {
         let packages = try CatalogPackageMapper.formulaPackages(from: fixture("catalog-formula"))
             + CatalogPackageMapper.caskPackages(from: fixture("catalog-cask"))

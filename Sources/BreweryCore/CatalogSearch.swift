@@ -5,6 +5,9 @@ public enum CatalogSearch {
     /// How many of each kind a shelf shows before it is truncated.
     public static let defaultCaskLimit = 16
     public static let defaultFormulaLimit = 8
+    /// Featured feeds the top charts, which page through far more than a
+    /// shelf row would ever show.
+    public static let defaultFeaturedLimit = 100
 
     public static func merge(_ packages: [CatalogPackage], installedPackages: [BrewPackage]) -> [CatalogPackage] {
         let installed = installedStatuses(installedPackages)
@@ -56,7 +59,8 @@ public enum CatalogSearch {
     public static func sections(
         _ packages: [CatalogPackage],
         caskLimit: Int = defaultCaskLimit,
-        formulaLimit: Int = defaultFormulaLimit
+        formulaLimit: Int = defaultFormulaLimit,
+        featuredLimit: Int = defaultFeaturedLimit
     ) -> [CatalogSection] {
         let ranked = packages.sorted(by: isMorePopular)
 
@@ -73,8 +77,8 @@ public enum CatalogSearch {
         // Featured is a ranking across everything, not a subject of its own.
         let featured = CatalogSection(
             category: .featured,
-            casks: Array(ranked.lazy.filter { $0.kind == .cask }.prefix(caskLimit)),
-            formulae: Array(ranked.lazy.filter { $0.kind == .formula }.prefix(formulaLimit)),
+            casks: Array(ranked.lazy.filter { $0.kind == .cask }.prefix(featuredLimit)),
+            formulae: Array(ranked.lazy.filter { $0.kind == .formula }.prefix(featuredLimit)),
             caskTotal: ranked.lazy.filter { $0.kind == .cask }.count,
             formulaTotal: ranked.lazy.filter { $0.kind == .formula }.count
         )

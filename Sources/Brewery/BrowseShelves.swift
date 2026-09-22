@@ -23,6 +23,21 @@ struct InstallButton: View {
     }
 }
 
+/// The App Store's "See All" affordance, as a reversible toggle.
+struct ShowMoreButton: View {
+    let isExpanded: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(isExpanded ? "Show Less" : "Show More", systemImage: isExpanded ? "chevron.up" : "chevron.down")
+                .font(.callout.weight(.medium))
+        }
+        .buttonStyle(.plain)
+        .foregroundColor(.accentColor)
+    }
+}
+
 struct ShelfHeader: View {
     let title: String
     let systemImage: String
@@ -132,11 +147,52 @@ struct CategoryTileGrid: View {
     let sections: [CatalogSection]
     let jump: (String) -> Void
 
-    private let columns = [GridItem(.adaptive(minimum: 150, maximum: 220), spacing: 10)]
+    /// Rows shown before the rest folds away behind the toggle.
+    static let collapsedRows = 2
+    private static let minimumTileWidth: CGFloat = 150
+    private static let spacing: CGFloat = 10
+
+    @State private var isExpanded = false
+    @State private var availableWidth: CGFloat = 0
+
+    /// Column count for the width we actually have, so "two rows" is exact
+    /// rather than a guess that breaks when the window is resized.
+    private var columnCount: Int {
+        guard availableWidth > 0 else { return 5 }
+        let fit = (availableWidth + Self.spacing) / (Self.minimumTileWidth + Self.spacing)
+        return max(2, Int(fit))
+    }
+
+    private var collapsedCount: Int { columnCount * Self.collapsedRows }
+    private var canToggle: Bool { sections.count > collapsedCount }
+
+    private var visible: [CatalogSection] {
+        isExpanded || !canToggle ? sections : Array(sections.prefix(collapsedCount))
+    }
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 10) {
-            ForEach(sections) { section in
+        VStack(alignment: .leading, spacing: 10) {
+            grid
+
+            if canToggle {
+                ShowMoreButton(isExpanded: isExpanded) {
+                    withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
+                }
+            }
+        }
+        .background(
+            GeometryReader { geometry in
+                Color.clear.preference(key: WidthPreference.self, value: geometry.size.width)
+            }
+        )
+        .onPreferenceChange(WidthPreference.self) { availableWidth = $0 }
+    }
+
+    private var grid: some View {
+        let columns = Array(repeating: GridItem(.flexible(), spacing: Self.spacing), count: columnCount)
+
+        return LazyVGrid(columns: columns, spacing: Self.spacing) {
+            ForEach(visible) { section in
                 Button {
                     jump(section.id)
                 } label: {
@@ -170,6 +226,13 @@ struct CategoryTileGrid: View {
     }
 }
 
+private struct WidthPreference: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 // MARK: - Top charts
 
 /// Two numbered charts side by side, ranked by real install counts.
@@ -178,6 +241,16 @@ struct TopChartsShelf: View {
     let formulae: [CatalogPackage]
     @Binding var selectedPackage: CatalogPackage?
     let action: (CatalogPackage) -> Void
+
+    /// Rows revealed at first and added per click. Both columns page
+    /// together so they stay the same height.
+    static let pageSize = 10
+
+    @State private var visibleCount = TopChartsShelf.pageSize
+
+    private var longest: Int { max(casks.count, formulae.count) }
+    private var canShowMore: Bool { visibleCount < longest }
+    private var canShowLess: Bool { visibleCount > Self.pageSize }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -188,8 +261,31 @@ struct TopChartsShelf: View {
             )
 
             HStack(alignment: .top, spacing: 14) {
-                chart(title: "Casks", packages: casks)
-                chart(title: "Formulae", packages: formulae)
+                chart(title: "Casks", packages: Array(casks.prefix(visibleCount)))
+                chart(title: "Formulae", packages: Array(formulae.prefix(visibleCount)))
+            }
+
+            if canShowMore || canShowLess {
+                HStack(spacing: 16) {
+                    if canShowMore {
+                        ShowMoreButton(isExpanded: false) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                visibleCount = min(visibleCount + Self.pageSize, longest)
+                            }
+                        }
+                    }
+                    if canShowLess {
+                        ShowMoreButton(isExpanded: true) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                visibleCount = Self.pageSize
+                            }
+                        }
+                    }
+                    Spacer()
+                    Text("\(min(visibleCount, longest)) of \(longest)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
         }
     }
