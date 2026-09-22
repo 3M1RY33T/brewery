@@ -111,6 +111,11 @@ private struct HeroCard: View {
     let open: () -> Void
     let action: () -> Void
 
+    /// Taken from the icon once it loads. Nil until then, and for icons that
+    /// are essentially monochrome, in which case the banner stays neutral
+    /// rather than inventing a colour the icon does not have.
+    @State private var iconTint: NSColor?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("MOST INSTALLED")
@@ -121,7 +126,9 @@ private struct HeroCard: View {
             Spacer(minLength: 10)
 
             HStack(alignment: .bottom, spacing: 14) {
-                PackageIconView(package: package, size: 72, cornerRadius: 16)
+                PackageIconView(package: package, size: 72, cornerRadius: 16) { image in
+                    iconTint = image.dominantColor()
+                }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(package.displayName)
@@ -143,19 +150,27 @@ private struct HeroCard: View {
         .padding(18)
         .frame(width: 460, height: 168, alignment: .topLeading)
         .background(
-            LinearGradient(
-                colors: [
-                    .brewery(hue: package.tintHue, saturation: 0.62, brightness: 0.55),
-                    .brewery(hue: package.tintHue, saturation: 0.75, brightness: 0.30)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            LinearGradient(colors: gradientStops, startPoint: .topLeading, endPoint: .bottomTrailing)
+                .animation(.easeInOut(duration: 0.35), value: iconTint)
         )
         .cornerRadius(14)
         .selectionRing(isSelected, cornerRadius: 14, lineWidth: 3)
         .contentShape(Rectangle())
         .onTapGesture(perform: open)
+    }
+
+    /// The icon's hue, pushed to a saturation and brightness that hold white
+    /// text, then darkened toward the corner. Monochrome icons get graphite.
+    private var gradientStops: [Color] {
+        guard let tint = iconTint?.usingColorSpace(.deviceRGB) else {
+            return [Color(white: 0.30), Color(white: 0.15)]
+        }
+        let hue = tint.hueComponent
+        let saturation = max(tint.saturationComponent, 0.45)
+        return [
+            Color(hue: hue, saturation: saturation, brightness: 0.52),
+            Color(hue: hue, saturation: min(saturation + 0.15, 0.85), brightness: 0.27)
+        ]
     }
 }
 

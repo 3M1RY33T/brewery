@@ -44,12 +44,26 @@ public struct IconDiskCache: Sendable {
         self.missLifetime = missLifetime
     }
 
+    /// Bumped when the resolution rules change in a way that makes cached
+    /// icons wrong, so users are not stuck with them for the hit lifetime.
+    /// v2: forge favicons no longer stand in for the apps hosted there.
+    public static let formatVersion = 2
+
     public static func defaultDirectory() -> URL {
+        brewerySupportDirectory().appendingPathComponent("IconCache-v\(formatVersion)", isDirectory: true)
+    }
+
+    /// Cache directories written by earlier formats, safe to delete.
+    public static func legacyDirectories() -> [URL] {
+        let base = brewerySupportDirectory()
+        return [base.appendingPathComponent("IconCache", isDirectory: true)]
+            + (1..<formatVersion).map { base.appendingPathComponent("IconCache-v\($0)", isDirectory: true) }
+    }
+
+    private static func brewerySupportDirectory() -> URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSTemporaryDirectory())
-        return base
-            .appendingPathComponent("Brewery", isDirectory: true)
-            .appendingPathComponent("IconCache", isDirectory: true)
+        return base.appendingPathComponent("Brewery", isDirectory: true)
     }
 
     public func load(_ cacheKey: String) -> Entry {

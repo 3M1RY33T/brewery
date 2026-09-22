@@ -74,17 +74,6 @@ public struct CatalogPackage: Identifiable, Equatable {
         .lowercased()
     }
 
-    /// A stable colour for this package, derived from its name so the same
-    /// package is always tinted the same way across launches.
-    public var tintHue: Double {
-        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
-        for byte in name.utf8 {
-            hash ^= UInt64(byte)
-            hash = hash &* 0x0000_0100_0000_01b3
-        }
-        return Double(hash % 360) / 360
-    }
-
     /// A copy carrying a different install status, used when the installed
     /// set changes without the catalog itself being refetched.
     func withInstallStatus(_ status: CatalogInstallStatus) -> CatalogPackage {

@@ -550,6 +550,64 @@ final class BreweryCoreTests: XCTestCase {
         XCTAssertTrue(PackageIconResolver.remoteIconCandidates(homepage: URL(fileURLWithPath: "/tmp/x")).isEmpty)
     }
 
+    func testGitHubHomepagesResolveToTheOwnerAvatarNotTheOctocat() {
+        // codex lives at github.com/openai/codex; the Octocat misrepresents it,
+        // OpenAI's avatar is the publisher's logo.
+        XCTAssertEqual(
+            PackageIconResolver.remoteIconCandidates(homepage: URL(string: "https://github.com/openai/codex")),
+            [URL(string: "https://github.com/openai.png?size=128")!]
+        )
+        XCTAssertEqual(
+            PackageIconResolver.remoteIconCandidates(homepage: URL(string: "https://www.github.com/Sequel-Ace/Sequel-Ace/")),
+            [URL(string: "https://github.com/Sequel-Ace.png?size=128")!]
+        )
+        // Site features are not owners.
+        XCTAssertTrue(PackageIconResolver.remoteIconCandidates(homepage: URL(string: "https://github.com/topics/editor")).isEmpty)
+        XCTAssertTrue(PackageIconResolver.remoteIconCandidates(homepage: URL(string: "https://github.com/")).isEmpty)
+    }
+
+    func testSharedHostsYieldNoIconRatherThanTheHostsOwn() {
+        for homepage in [
+            "https://sourceforge.net/projects/handbrake/",
+            "https://gitlab.com/inkscape/inkscape",
+            "https://fonts.google.com/specimen/Inter",
+            "https://pypi.org/project/black/"
+        ] {
+            XCTAssertTrue(
+                PackageIconResolver.remoteIconCandidates(homepage: URL(string: homepage)).isEmpty,
+                "\(homepage) should not borrow its host's favicon"
+            )
+        }
+
+        // A vendor's own domain still resolves, and GitHub's own docs are
+        // GitHub's product, so the GitHub favicon is truthful there.
+        XCTAssertFalse(PackageIconResolver.remoteIconCandidates(homepage: URL(string: "https://iterm2.com/")).isEmpty)
+        XCTAssertFalse(PackageIconResolver.remoteIconCandidates(homepage: URL(string: "https://docs.github.com/en/copilot")).isEmpty)
+    }
+
+    func testFontCasksNeverLookForAnIcon() {
+        XCTAssertTrue(PackageIconResolver.isFont(token: "font-hack-nerd-font"))
+        XCTAssertFalse(PackageIconResolver.isFont(token: "fontforge"))
+
+        let sources = PackageIconResolver.sources(
+            kind: .cask,
+            token: "font-hack-nerd-font",
+            appBundleName: nil,
+            homepage: URL(string: "https://github.com/ryanoasis/nerd-fonts"),
+            caskroomDirectories: []
+        )
+        XCTAssertTrue(sources.isEmpty)
+    }
+
+    func testIconCacheDirectoryIsVersionedAndKnowsItsPredecessors() {
+        let current = IconDiskCache.defaultDirectory()
+        XCTAssertTrue(current.lastPathComponent.hasSuffix("-v\(IconDiskCache.formatVersion)"))
+
+        let legacy = IconDiskCache.legacyDirectories()
+        XCTAssertTrue(legacy.contains { $0.lastPathComponent == "IconCache" })
+        XCTAssertFalse(legacy.contains(current))
+    }
+
     func testLocalAppBundleLookupRejectsPathTraversal() throws {
         let directory = URL(fileURLWithPath: NSTemporaryDirectory())
         XCTAssertNil(PackageIconResolver.localAppBundleURL(forBundleNamed: "../Firefox.app", in: [directory]))

@@ -102,23 +102,64 @@ public enum PackageIconResolver {
         return nil
     }
 
+    /// Hosts whose favicon says nothing about the app hosted there. A cask
+    /// on GitHub is not a GitHub product, and showing the Octocat for a
+    /// thousand casks misrepresents every one of them.
+    public static let sharedHosts: Set<String> = [
+        "github.com", "gitlab.com", "bitbucket.org", "codeberg.org", "sourceforge.net",
+        "gitee.com", "framagit.org", "sr.ht", "git.sr.ht", "notabug.org",
+        "fonts.google.com", "pypi.org", "npmjs.com", "crates.io", "rubygems.org",
+        "apps.apple.com", "chromewebstore.google.com", "addons.mozilla.org"
+    ]
+
+    /// GitHub paths that are site features rather than a user or organisation.
+    private static let gitHubReservedOwners: Set<String> = [
+        "about", "apps", "collections", "enterprise", "explore", "features", "login",
+        "marketplace", "orgs", "pricing", "security", "settings", "sponsors", "topics", "trending"
+    ]
+
+    /// Homebrew's convention for font casks. Fonts have no icon of their own,
+    /// and whatever their homepage serves is either a forge or a foundry.
+    public static func isFont(token: String) -> Bool {
+        token.hasPrefix("font-")
+    }
+
     /// Icon URLs derived from a homepage, best quality first.
     ///
-    /// The first two go to the vendor the cask installs from. DuckDuckGo's
-    /// icon service is the last resort, and reaching it discloses the
-    /// homepage's host.
+    /// The vendor's own site is tried first. DuckDuckGo's icon service is the
+    /// last resort, and reaching it discloses the homepage's host. Shared
+    /// hosts are skipped entirely, except GitHub, where the owner's avatar
+    /// is the publisher's logo and is what the App Store would show.
     public static func remoteIconCandidates(homepage: URL?) -> [URL] {
         guard let homepage,
               let scheme = homepage.scheme?.lowercased(),
               scheme == "http" || scheme == "https",
-              let host = homepage.host,
-              !host.isEmpty else { return [] }
+              let rawHost = homepage.host,
+              !rawHost.isEmpty else { return [] }
+
+        let host = rawHost.lowercased()
+        let bareHost = host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+
+        if bareHost == "github.com" {
+            return gitHubOwnerAvatar(for: homepage).map { [$0] } ?? []
+        }
+        guard !sharedHosts.contains(bareHost) else { return [] }
 
         return [
             URL(string: "https://\(host)/apple-touch-icon.png"),
             URL(string: "https://\(host)/favicon.ico"),
             URL(string: "https://icons.duckduckgo.com/ip3/\(host).ico")
         ].compactMap { $0 }
+    }
+
+    /// `https://github.com/<owner>.png` serves the user or organisation
+    /// avatar; `size` picks the rendition.
+    static func gitHubOwnerAvatar(for homepage: URL) -> URL? {
+        let components = homepage.path.split(separator: "/").map(String.init)
+        guard let owner = components.first,
+              !owner.isEmpty,
+              !gitHubReservedOwners.contains(owner.lowercased()) else { return nil }
+        return URL(string: "https://github.com/\(owner).png?size=128")
     }
 
     /// The full ordered candidate list for a package.
@@ -134,7 +175,7 @@ public enum PackageIconResolver {
         caskroomDirectories: [URL]? = nil,
         fileManager: FileManager = .default
     ) -> [PackageIconSource] {
-        guard kind == .cask else { return [] }
+        guard kind == .cask, !isFont(token: token) else { return [] }
 
         // What the cask actually installed, then what it says it installs.
         // Either way the bundle is local and carries the real icon.
