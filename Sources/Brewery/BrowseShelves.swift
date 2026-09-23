@@ -22,16 +22,38 @@ extension Color {
     /// material; lose the vibrancy and every card vanished. Opaque rather
     /// than a translucent tint so nested surfaces do not compound.
     static let cardBackground = Color(nsColor: .dynamic(dark: 0.20, light: 1.0))
-    /// Small chips and count badges, a step brighter than a card.
-    static let chipBackground = Color(nsColor: .dynamic(dark: 0.27, light: 0.90))
+    /// Small chips and count badges, a step brighter than a card in dark
+    /// mode and a step darker than the page in light mode.
+    static let chipBackground = Color(nsColor: .dynamic(dark: 0.27, light: 0.87))
+
+    /// The page cards sit on. In dark mode the window background already sits
+    /// a step below a card, so nothing is painted. In light mode the window
+    /// background is pure white, the same as a card, and every card vanished
+    /// into it, so the page is painted a pale grey there instead: slightly
+    /// cool, so it reads as a surface rather than a dimmed white.
+    static let pageBackground = Color(nsColor: .dynamic(dark: .clear, light: NSColor(srgbRed: 0.918, green: 0.925, blue: 0.937, alpha: 1)))
+    /// A card's edge and lift. Dark mode needs neither; in light mode a
+    /// white card on a pale page needs both to hold its shape.
+    static let cardBorder = Color(nsColor: .dynamic(dark: .clear, light: NSColor(white: 0, alpha: 0.11)))
+    static let cardShadow = Color(nsColor: .dynamic(dark: .clear, light: NSColor(white: 0, alpha: 0.07)))
+    /// The current section's pill. In light mode the navigation bar is the
+    /// darkest grey in the palette, so the pill is white rather than a chip.
+    static let navSelection = Color(nsColor: .dynamic(dark: 0.27, light: 1.0))
+    /// Recessed boxes for command text. The system text background is white
+    /// in light mode, which disappeared against a white sheet.
+    static let wellBackground = Color(nsColor: .dynamic(dark: .textBackgroundColor, light: NSColor(white: 0.945, alpha: 1)))
 }
 
 extension NSColor {
     /// An opaque grey that resolves per appearance.
     static func dynamic(dark: CGFloat, light: CGFloat) -> NSColor {
+        dynamic(dark: NSColor(white: dark, alpha: 1), light: NSColor(white: light, alpha: 1))
+    }
+
+    /// A colour that resolves per appearance.
+    static func dynamic(dark: NSColor, light: NSColor) -> NSColor {
         NSColor(name: nil) { appearance in
-            let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            return NSColor(white: isDark ? dark : light, alpha: 1)
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
         }
     }
 }
@@ -49,6 +71,15 @@ extension View {
     /// The tint a selectable row uses.
     func selectionFill(_ isSelected: Bool) -> some View {
         background(isSelected ? Color.selectionFill : Color.clear)
+    }
+
+    /// The hairline and soft shadow a card draws; see `Color.cardBorder`.
+    func cardEdge(cornerRadius: CGFloat) -> some View {
+        overlay(
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .strokeBorder(Color.cardBorder, lineWidth: 1)
+        )
+        .shadow(color: .cardShadow, radius: 3, x: 0, y: 1)
     }
 }
 
@@ -206,6 +237,9 @@ private struct HeroCard: View {
         )
         .cornerRadius(14)
         .selectionRing(isSelected, cornerRadius: 14, lineWidth: 3)
+        // The banner is dark in either appearance, so its controls are too;
+        // a light-mode button drew dark text on the dark gradient.
+        .environment(\.colorScheme, .dark)
         .contentShape(Rectangle())
         .onTapGesture(perform: open)
     }
@@ -243,6 +277,13 @@ struct CategoryTileGrid: View {
     private static let spacing: CGFloat = 12
 
     @State private var isExpanded = false
+    @Environment(\.colorScheme) private var colorScheme
+
+    /// Dark mode keeps plain cards; in light mode each tile takes a pale wash
+    /// of its icon's colour, so the grid is not a wall of identical white.
+    private func tileBackground(hue: Double) -> Color {
+        colorScheme == .dark ? Color.cardBackground : Color.brewery(hue: hue, saturation: 0.09, brightness: 1.0)
+    }
 
     /// Column count for the width we actually have, so "two rows" is exact
     /// rather than a guess that breaks when the window is resized.
@@ -301,8 +342,9 @@ struct CategoryTileGrid: View {
                     }
                     .padding(12)
                     .frame(maxWidth: .infinity)
-                    .background(Color.cardBackground)
+                    .background(tileBackground(hue: section.category.tintHue))
                     .cornerRadius(11)
+                    .cardEdge(cornerRadius: 11)
                 }
                 .buttonStyle(.plain)
             }
@@ -399,6 +441,7 @@ struct TopChartsShelf: View {
             }
             .background(Color.cardBackground)
             .cornerRadius(10)
+            .cardEdge(cornerRadius: 10)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -552,6 +595,7 @@ struct SpotlightShelf: View {
             }
             .background(Color.cardBackground)
             .cornerRadius(10)
+            .cardEdge(cornerRadius: 10)
         }
     }
 }
@@ -562,6 +606,16 @@ private struct SpotlightCard: View {
     let isSelected: Bool
     let open: () -> Void
     let action: () -> Void
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    /// Where the card's gradient starts. Dark mode fades a deep tint into the
+    /// card; light mode needs a pale one, or the title sits on a dark wash.
+    private var tint: Color {
+        colorScheme == .dark
+            ? Color.brewery(hue: tintHue, saturation: 0.30, brightness: 0.34)
+            : Color.brewery(hue: tintHue, saturation: 0.16, brightness: 0.96)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -605,15 +659,13 @@ private struct SpotlightCard: View {
         .frame(width: 300, height: 281, alignment: .topLeading)
         .background(
             LinearGradient(
-                colors: [
-                    Color.brewery(hue: tintHue, saturation: 0.30, brightness: 0.34),
-                    Color.cardBackground
-                ],
+                colors: [tint, Color.cardBackground],
                 startPoint: .top,
                 endPoint: .bottom
             )
         )
         .cornerRadius(12)
+        .cardEdge(cornerRadius: 12)
         .selectionRing(isSelected, cornerRadius: 12)
         .contentShape(Rectangle())
         .onTapGesture(perform: open)

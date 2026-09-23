@@ -67,6 +67,7 @@ struct InstalledCaskCard: View {
         .frame(minHeight: 200, alignment: .topLeading)
         .background(Color.cardBackground)
         .cornerRadius(8)
+        .cardEdge(cornerRadius: 8)
         .selectionRing(isSelected, cornerRadius: 8)
         .contentShape(Rectangle())
         .onTapGesture(perform: select)

@@ -27,7 +27,7 @@ Library shows installed casks as cards and formulae as a list, with outdated pac
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="Docs/Screenshots/brewery-library-dark.png">
-  <img alt="Brewery's Library page with openssl@3 selected: outdated casks as cards, outdated formulae as a list, and a detail pane listing one dependency and fifteen dependents" src="Docs/Screenshots/brewery-library-light.png">
+  <img alt="Brewery's Library page with cmake selected: installed casks as cards, formulae as a list with their pending versions, and a detail pane showing versions, tap, caveats, dependencies and dependents" src="Docs/Screenshots/brewery-library-light.png">
 </picture>
 
 ## Nothing runs without confirmation
@@ -36,7 +36,7 @@ Install, upgrade, uninstall and cleanup all stop here first. The exact `brew` co
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="Docs/Screenshots/brewery-confirm-dark.png">
-  <img alt="A confirmation sheet titled Uninstall openssl@3, showing the exact command brew uninstall openssl@3 with Cancel and Run Command buttons" src="Docs/Screenshots/brewery-confirm-light.png">
+  <img alt="A confirmation sheet titled Uninstall expat, showing the exact command brew uninstall expat with Cancel and Run Command buttons" src="Docs/Screenshots/brewery-confirm-light.png">
 </picture>
 
 ## Diagnostics

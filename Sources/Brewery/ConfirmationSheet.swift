@@ -26,7 +26,7 @@ struct ConfirmationSheet: View {
             }
             .frame(maxHeight: 220)
             .fixedSize(horizontal: false, vertical: true)
-            .background(Color(nsColor: .textBackgroundColor))
+            .background(Color.wellBackground)
             .cornerRadius(6)
 
             HStack {

@@ -19,7 +19,7 @@ struct NavigationBar: View {
                         .font(.callout.weight(.medium))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 7)
-                        .background(isActive ? Color.chipBackground : Color.clear)
+                        .background(isActive ? Color.navSelection : Color.clear)
                         .cornerRadius(8)
                         .contentShape(Rectangle())
                 }

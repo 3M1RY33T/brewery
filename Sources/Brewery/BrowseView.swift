@@ -494,6 +494,7 @@ private struct FormulaShelfList: View {
                     .frame(maxWidth: .infinity)
                     .background(Color.cardBackground)
                     .cornerRadius(8)
+                    .cardEdge(cornerRadius: 8)
                 }
             }
         }
@@ -609,6 +610,7 @@ private struct CatalogCard: View {
         .frame(minHeight: 190, alignment: .topLeading)
         .background(Color.cardBackground)
         .cornerRadius(8)
+        .cardEdge(cornerRadius: 8)
         .selectionRing(isSelected, cornerRadius: 8)
         .contentShape(Rectangle())
         .onTapGesture(perform: open)

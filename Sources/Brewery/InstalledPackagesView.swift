@@ -77,6 +77,7 @@ struct InstalledPackagesView: View {
                                 }
                                 .background(Color.cardBackground)
                                 .cornerRadius(8)
+                                .cardEdge(cornerRadius: 8)
                             }
                         }
                     }
@@ -320,6 +321,7 @@ private struct InstalledCasksSheet: View {
                 }
                 .padding(16)
             }
+            .background(Color.pageBackground)
         }
         .frame(minWidth: 780, idealWidth: 920, maxWidth: 1200, minHeight: 480, idealHeight: 640, maxHeight: 900)
     }

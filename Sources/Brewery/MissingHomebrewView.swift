@@ -38,7 +38,7 @@ struct MissingHomebrewView: View {
                     .textSelection(.enabled)
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(nsColor: .textBackgroundColor))
+                    .background(Color.wellBackground)
                     .cornerRadius(6)
             }
 

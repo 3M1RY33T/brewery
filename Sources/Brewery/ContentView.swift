@@ -36,6 +36,7 @@ struct ContentView: View {
         Group {
             if store.service.brewPath == nil {
                 MissingHomebrewView(report: store.service.detectionReport)
+                    .background(Color.pageBackground)
             } else {
                 mainInterface
             }
@@ -159,6 +160,7 @@ struct ContentView: View {
                 }
             }
         }
+        .background(Color.pageBackground)
     }
 
     private var packageSearchHeader: some View {
@@ -219,6 +221,9 @@ private struct DetailPaneResizeHandle: View {
                 .frame(width: 1)
         }
         .frame(width: 10)
+        // The window background behind the handle is the dark chrome grey in
+        // light mode; keep the strip the colour of the pane beside it.
+        .background(Color(nsColor: .dynamic(dark: .clear, light: .controlBackgroundColor)))
         .contentShape(Rectangle())
         .help("Drag to resize package details")
         .zIndex(1)

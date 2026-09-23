@@ -6,9 +6,9 @@
     "semantic_hash": ""
   },
   "Scripts/build-app.sh": {
-    "mtime": 1780296915.6926506,
-    "seen": 1787855493.059676,
-    "ast_hash": "e003356f587f9dfc23c8953baa69d8e9",
+    "mtime": 1790060719.2047105,
+    "seen": 1790178863.067154,
+    "ast_hash": "0a7b0a6f6d9332b58b780d71335eb64a",
     "semantic_hash": ""
   },
   "Scripts/run-app.sh": {
@@ -24,9 +24,9 @@
     "semantic_hash": ""
   },
   "Sources/Brewery/BrowseView.swift": {
-    "mtime": 1790055235.645527,
-    "seen": 1790055981.3160052,
-    "ast_hash": "dc800a6d8acd9c6e2a02b997394b1f04",
+    "mtime": 1790179167.6478665,
+    "seen": 1790179252.4687371,
+    "ast_hash": "5cf146fea209e12d05ab1fbb5b65cf92",
     "semantic_hash": ""
   },
   "Sources/Brewery/CommandLogView.swift": {
@@ -36,27 +36,27 @@
     "semantic_hash": ""
   },
   "Sources/Brewery/ConfirmationSheet.swift": {
-    "mtime": 1790046129.31337,
-    "seen": 1790046301.6080158,
-    "ast_hash": "1f3f95296c561abdcfcaa75ba880036e",
+    "mtime": 1790178590.1522462,
+    "seen": 1790178863.0671601,
+    "ast_hash": "c159eec087437fe765cf9ef8986f4d89",
     "semantic_hash": ""
   },
   "Sources/Brewery/ContentView.swift": {
-    "mtime": 1790056718.692274,
-    "seen": 1790056784.6751301,
-    "ast_hash": "718abc87d3ca6a58887d54043bc04c51",
+    "mtime": 1790179504.1956472,
+    "seen": 1790179561.634801,
+    "ast_hash": "8bd268d968f730202a620349b91f1417",
     "semantic_hash": ""
   },
   "Sources/Brewery/DiagnosticsView.swift": {
-    "mtime": 1790049651.9106212,
-    "seen": 1790050503.7610419,
-    "ast_hash": "f2ad6596eb59d271a63e90e1914f9f20",
+    "mtime": 1790179167.6490126,
+    "seen": 1790179252.468739,
+    "ast_hash": "0cfec3ce6a8e5b191bf3fc4fdc74c442",
     "semantic_hash": ""
   },
   "Sources/Brewery/MissingHomebrewView.swift": {
-    "mtime": 1780296915.6031153,
-    "seen": 1787855493.059681,
-    "ast_hash": "c166c2312bfbc3885c2520d0238dc08f",
+    "mtime": 1790178590.1525848,
+    "seen": 1790178863.067163,
+    "ast_hash": "b3efb39737d784ae207db57d18be6a4b",
     "semantic_hash": ""
   },
   "Sources/Brewery/PackageDetailView.swift": {
@@ -132,15 +132,15 @@
     "semantic_hash": ""
   },
   "Sources/BreweryCore/PackageStore.swift": {
-    "mtime": 1790055967.8355289,
-    "seen": 1790055981.316023,
-    "ast_hash": "e346e4e778f1c6bbab3408e4a6282535",
+    "mtime": 1790057223.9211204,
+    "seen": 1790178863.067177,
+    "ast_hash": "8b3928dbbd3b448b00b6046015e713dc",
     "semantic_hash": ""
   },
   "Tests/BreweryCoreTests/BreweryCoreTests.swift": {
-    "mtime": 1790055967.8370998,
-    "seen": 1790055981.316024,
-    "ast_hash": "f8cd552fc4c67e7014d447f13e429f30",
+    "mtime": 1790057272.5014093,
+    "seen": 1790178863.067178,
+    "ast_hash": "5b00a79543ef9fb0c92d5072a13cfe72",
     "semantic_hash": ""
   },
   "Tests/BreweryCoreTests/Fixtures/brew-info-v2-cask-depends-on.json": {
@@ -174,9 +174,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1790056781.6753132,
-    "seen": 1790056784.6751528,
-    "ast_hash": "eaaaf50be1a5dd992664a881685efb0a",
+    "mtime": 1790178160.2162366,
+    "seen": 1790178863.067183,
+    "ast_hash": "7b189facf90b2143945e370f575e73bd",
     "semantic_hash": ""
   },
   "Sources/Brewery/Resources/brewery-logo.png": {
@@ -210,51 +210,39 @@
     "semantic_hash": ""
   },
   "Docs/Screenshots/brewery-browse-dark.png": {
-    "mtime": 1790033665.0094585,
-    "seen": 1790034500.759474,
-    "ast_hash": "f525efd742bfdbf8595ce7c4c6ef05bb",
+    "mtime": 1790178156.850733,
+    "seen": 1790178863.067183,
+    "ast_hash": "cf768acf3b38300355002ed89b2c7571",
     "semantic_hash": ""
   },
   "Docs/Screenshots/brewery-browse-light.png": {
-    "mtime": 1790033665.0134137,
-    "seen": 1790034500.759474,
-    "ast_hash": "c625943955ea5142348311254d3c9339",
+    "mtime": 1790178158.1600792,
+    "seen": 1790178863.0671842,
+    "ast_hash": "a3f2ea21c57d43ac24d8d86fbb5c5d37",
     "semantic_hash": ""
   },
   "Docs/Screenshots/brewery-confirm-dark.png": {
-    "mtime": 1790033665.0161889,
-    "seen": 1790034500.759475,
-    "ast_hash": "0524639859aeb79c00dcbddfe1d99320",
+    "mtime": 1790178158.5564282,
+    "seen": 1790178863.0671842,
+    "ast_hash": "8b93a5a4772613fbd91273ecc76c95a0",
     "semantic_hash": ""
   },
   "Docs/Screenshots/brewery-confirm-light.png": {
-    "mtime": 1790033665.0177999,
-    "seen": 1790034500.759475,
-    "ast_hash": "f9fa18bc8416bb8f84a142cc36fc0125",
-    "semantic_hash": ""
-  },
-  "Docs/Screenshots/brewery-dependencies-dark.png": {
-    "mtime": 1790033665.024426,
-    "seen": 1790034500.759476,
-    "ast_hash": "415efdad281116fbe3607f64677db6da",
-    "semantic_hash": ""
-  },
-  "Docs/Screenshots/brewery-dependencies-light.png": {
-    "mtime": 1790033665.0268953,
-    "seen": 1790034500.759476,
-    "ast_hash": "59f5b70a0c7125a0fe43b716073357a6",
+    "mtime": 1790178159.0729825,
+    "seen": 1790178863.067185,
+    "ast_hash": "fdb7c77cb481372e712b559571206a65",
     "semantic_hash": ""
   },
   "Docs/Screenshots/brewery-diagnostics-dark.png": {
-    "mtime": 1790033665.0285492,
-    "seen": 1790034500.759477,
-    "ast_hash": "2f13ad24a02032320f1289e253dd9131",
+    "mtime": 1790060267.109577,
+    "seen": 1790178863.067185,
+    "ast_hash": "8ac436b9aac0327a125660ed36d9fdff",
     "semantic_hash": ""
   },
   "Docs/Screenshots/brewery-diagnostics-light.png": {
-    "mtime": 1790033665.0305178,
-    "seen": 1790034500.759477,
-    "ast_hash": "ff6159cf5a7e2c3d64f007c0bdf253a9",
+    "mtime": 1790060268.4505594,
+    "seen": 1790178863.0671859,
+    "ast_hash": "c68de02eea12e798c31c369b99494ed2",
     "semantic_hash": ""
   },
   "Sources/BreweryCore/CatalogCategory.swift": {
@@ -282,15 +270,15 @@
     "semantic_hash": ""
   },
   "Sources/Brewery/BrowseShelves.swift": {
-    "mtime": 1790055760.558163,
-    "seen": 1790055981.3160052,
-    "ast_hash": "d1141e9145e05d8f9756758422a85f73",
+    "mtime": 1790179504.1950946,
+    "seen": 1790179561.634798,
+    "ast_hash": "29fbf2857645fc4917a4bc0e721b2d86",
     "semantic_hash": ""
   },
   "Sources/Brewery/InstalledPackagesView.swift": {
-    "mtime": 1790049052.8317268,
-    "seen": 1790049066.5037818,
-    "ast_hash": "a69a34c79b10e84956a275e77a4a3d5e",
+    "mtime": 1790179167.6483898,
+    "seen": 1790179252.4687412,
+    "ast_hash": "d519b3d3a431a3bf95e1d1c10793000a",
     "semantic_hash": ""
   },
   "Sources/BreweryCore/PinnedStore.swift": {
@@ -300,21 +288,33 @@
     "semantic_hash": ""
   },
   "Sources/Brewery/WindowChrome.swift": {
-    "mtime": 1790052262.70722,
-    "seen": 1790052309.774836,
-    "ast_hash": "6915c76ba09d3aae54eed1770887623b",
+    "mtime": 1790179856.5598328,
+    "seen": 1790179886.476566,
+    "ast_hash": "372cb9275c033466b22e029087bd601b",
     "semantic_hash": ""
   },
   "Sources/Brewery/InstalledCaskCard.swift": {
-    "mtime": 1790055967.8364584,
-    "seen": 1790055981.316009,
-    "ast_hash": "a8efa598bf1c370265829451929cf586",
+    "mtime": 1790179167.648136,
+    "seen": 1790179252.46874,
+    "ast_hash": "48c82527226ddf7e116617d246ca5161",
     "semantic_hash": ""
   },
   "Sources/Brewery/NavigationBar.swift": {
-    "mtime": 1790056718.6563928,
-    "seen": 1790056784.675134,
-    "ast_hash": "0b79dd1b2c520195800f0e7128eea097",
+    "mtime": 1790179504.194668,
+    "seen": 1790179561.634804,
+    "ast_hash": "b3414c9095e32d21c73bcd731f05f8aa",
+    "semantic_hash": ""
+  },
+  "Docs/Screenshots/brewery-library-dark.png": {
+    "mtime": 1790178159.6315,
+    "seen": 1790178863.0671868,
+    "ast_hash": "118670fd81ee3a49a25d43427860176c",
+    "semantic_hash": ""
+  },
+  "Docs/Screenshots/brewery-library-light.png": {
+    "mtime": 1790178160.187555,
+    "seen": 1790178863.0671868,
+    "ast_hash": "0d6cc42757e75a4a39c6ddc4cec0e660",
     "semantic_hash": ""
   }
 }

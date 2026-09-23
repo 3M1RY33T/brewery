@@ -76,6 +76,7 @@ struct DiagnosticsBlock: View {
                 .padding(10)
                 .background(Color.cardBackground)
                 .cornerRadius(6)
+                .cardEdge(cornerRadius: 6)
         }
     }
 }
