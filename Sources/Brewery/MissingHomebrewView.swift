@@ -8,7 +8,11 @@ struct MissingHomebrewView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Image("brewery-logo", bundle: .module)
+            // The copy build-app.sh puts in the app's Resources, not
+            // Bundle.module: the app ships without SwiftPM's resource bundle,
+            // so that accessor falls back to this machine's build folder and
+            // crashes on any other Mac.
+            Image(nsImage: NSImage(named: "brewery-logo") ?? NSApp.applicationIconImage)
                 .resizable()
                 .scaledToFit()
                 .frame(width: 82, height: 82)
