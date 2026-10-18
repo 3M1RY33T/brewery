@@ -104,6 +104,28 @@ struct ContentView: View {
         .onAppear {
             detailPaneWidth = clampedDetailPaneWidth
         }
+        // Kept off the view carrying the confirmation sheet: two sheets
+        // on one view can fight over which one presents.
+        .sheet(item: passwordRequest) { request in
+            PasswordPromptSheet(request: request) {
+                store.cancelPasswordRequest(request.id)
+            } submit: { password in
+                store.submitPassword(password, for: request.id)
+            }
+        }
+        .onChange(of: store.passwordRequest) { request in
+            // The command is stuck until someone answers; if Brewery is in
+            // the background, bounce the Dock icon until they come back.
+            if request != nil {
+                NSApp.requestUserAttention(.criticalRequest)
+            }
+        }
+    }
+
+    /// Read-only: the sheet's own buttons answer the request by ID, so a
+    /// dismissal SwiftUI reports late cannot cancel a newer prompt.
+    private var passwordRequest: Binding<PasswordRequest?> {
+        Binding(get: { store.passwordRequest }, set: { _ in })
     }
 
     private func detailPane(isStacked: Bool) -> some View {

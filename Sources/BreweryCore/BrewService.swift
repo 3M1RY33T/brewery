@@ -11,7 +11,13 @@ public protocol BrewServicing: AnyObject {
     var brewPath: URL? { get }
     func refreshInventory(onOutput: @escaping @Sendable (CommandLogEntry.Stream, String) -> Void) async throws -> BrewInventory
     func refreshPackages(onOutput: @escaping @Sendable (CommandLogEntry.Stream, String) -> Void) async throws -> [BrewPackage]
-    func runAction(_ action: BrewAction, onOutput: @escaping @Sendable (CommandLogEntry.Stream, String) -> Void) async throws -> CommandResult
+    /// `onPasswordRequest` answers sudo when the action needs administrator
+    /// rights, as cask installers and uninstallers often do.
+    func runAction(
+        _ action: BrewAction,
+        onOutput: @escaping @Sendable (CommandLogEntry.Stream, String) -> Void,
+        onPasswordRequest: @escaping SudoPasswordHandler
+    ) async throws -> CommandResult
     func diagnostics(onOutput: @escaping @Sendable (CommandLogEntry.Stream, String) -> Void) async throws -> BrewDiagnostics
 }
 
@@ -21,6 +27,7 @@ public final class LiveBrewService: BrewServicing {
 
     private let runner: CommandRunner
     private let decoder: JSONDecoder
+    private var askpass: SudoAskpass?
 
     public init(detector: BrewDetector = BrewDetector(), runner: CommandRunner = CommandRunner()) {
         let report = detector.detect()
@@ -40,8 +47,29 @@ public final class LiveBrewService: BrewServicing {
         try await refreshInventory(onOutput: onOutput).packages
     }
 
-    public func runAction(_ action: BrewAction, onOutput: @escaping @Sendable (CommandLogEntry.Stream, String) -> Void) async throws -> CommandResult {
-        try await runBrew(action.arguments, onOutput: onOutput)
+    public func runAction(
+        _ action: BrewAction,
+        onOutput: @escaping @Sendable (CommandLogEntry.Stream, String) -> Void,
+        onPasswordRequest: @escaping SudoPasswordHandler
+    ) async throws -> CommandResult {
+        guard let askpass = askpassHelper(onOutput: onOutput) else {
+            return try await runBrew(action.arguments, onOutput: onOutput)
+        }
+        return try await askpass.serving(onPasswordRequest) {
+            try await runBrew(action.arguments, environment: askpass.environment, onOutput: onOutput)
+        }
+    }
+
+    /// Made on the first action rather than at launch, so browsing alone
+    /// never leaves a helper in the temporary directory.
+    private func askpassHelper(onOutput: @Sendable (CommandLogEntry.Stream, String) -> Void) -> SudoAskpass? {
+        if let askpass { return askpass }
+        do {
+            askpass = try SudoAskpass()
+        } catch {
+            onOutput(.stderr, "Brewery cannot ask for your password, so steps that need sudo will fail. \(error.localizedDescription)\n")
+        }
+        return askpass
     }
 
     public func diagnostics(onOutput: @escaping @Sendable (CommandLogEntry.Stream, String) -> Void) async throws -> BrewDiagnostics {
@@ -73,11 +101,13 @@ public final class LiveBrewService: BrewServicing {
 
     private func runBrew(
         _ arguments: [String],
+        environment overrides: [String: String] = [:],
         onOutput: @escaping @Sendable (CommandLogEntry.Stream, String) -> Void
     ) async throws -> CommandResult {
         guard let brewPath else { throw BrewServiceError.brewNotFound(detectionReport) }
         onOutput(.status, "Running \(BrewActionDisplay.display(arguments: arguments))\n")
-        return try await runner.run(executableURL: brewPath, arguments: arguments, onOutput: onOutput)
+        let environment = ProcessInfo.processInfo.environment.merging(overrides) { _, override in override }
+        return try await runner.run(executableURL: brewPath, arguments: arguments, environment: environment, onOutput: onOutput)
     }
 }
 

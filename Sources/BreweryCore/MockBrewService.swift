@@ -5,6 +5,10 @@ public final class MockBrewService: BrewServicing {
     public var brewPath: URL?
     public var packages: [BrewPackage]
     public private(set) var actions: [BrewAction] = []
+    /// Prompts each action relays before finishing, standing in for sudo
+    /// asking for a password. The answers land in `passwordAnswers`.
+    public var passwordPrompts: [SudoPasswordPrompt] = []
+    public private(set) var passwordAnswers: [String?] = []
 
     public init(
         brewAvailable: Bool = true,
@@ -40,9 +44,27 @@ public final class MockBrewService: BrewServicing {
         )
     }
 
-    public func runAction(_ action: BrewAction, onOutput: @escaping @Sendable (CommandLogEntry.Stream, String) -> Void) async throws -> CommandResult {
+    public func runAction(
+        _ action: BrewAction,
+        onOutput: @escaping @Sendable (CommandLogEntry.Stream, String) -> Void,
+        onPasswordRequest: @escaping SudoPasswordHandler
+    ) async throws -> CommandResult {
         actions.append(action)
         onOutput(.stdout, "Mock: \(action.commandDisplay)\n")
+        for prompt in passwordPrompts {
+            let answer = await onPasswordRequest(prompt)
+            passwordAnswers.append(answer)
+            if answer == nil {
+                return CommandResult(
+                    commandDisplay: action.commandDisplay,
+                    stdout: "",
+                    stderr: "sudo: no password was provided\n",
+                    exitCode: 1,
+                    startedAt: Date(),
+                    finishedAt: Date()
+                )
+            }
+        }
         return CommandResult(
             commandDisplay: action.commandDisplay,
             stdout: "ok",

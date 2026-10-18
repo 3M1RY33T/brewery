@@ -40,6 +40,10 @@ public final class CommandRunner {
             process.executableURL = executableURL
             process.arguments = arguments
             process.environment = environment
+            // There is no terminal behind Brewery to answer a prompt, so any
+            // prompt reads end-of-file and fails instead of waiting forever.
+            // sudo's password prompts go through SUDO_ASKPASS instead.
+            process.standardInput = FileHandle.nullDevice
 
             let stdout = Pipe()
             let stderr = Pipe()

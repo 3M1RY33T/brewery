@@ -1,6 +1,16 @@
 import Combine
 import Foundation
 
+/// sudo waiting on the user for an administrator password while an action
+/// runs.
+public struct PasswordRequest: Identifiable, Equatable {
+    public let id = UUID()
+    public let actionTitle: String
+    /// sudo asked again from the same process: the last password was wrong.
+    public let isRetry: Bool
+    let sudoProcessID: Int32?
+}
+
 @MainActor
 public final class PackageStore: ObservableObject {
     @Published public private(set) var packages: [BrewPackage] = []
@@ -12,8 +22,13 @@ public final class PackageStore: ObservableObject {
     @Published public private(set) var isRunningCommand = false
     @Published public private(set) var statusMessage = "Ready"
     @Published public private(set) var diagnostics: BrewDiagnostics?
+    @Published public private(set) var passwordRequest: PasswordRequest?
 
     public let service: BrewServicing
+
+    private var isAnsweringPasswords = false
+    private var passwordContinuation: CheckedContinuation<String?, Never>?
+    private var lastAnsweredSudoProcessID: Int32?
 
     public init(service: BrewServicing = LiveBrewService()) {
         self.service = service
@@ -61,7 +76,7 @@ public final class PackageStore: ObservableObject {
 
     public func perform(_ action: BrewAction) async {
         await runTrackedCommand(status: action.title) { [self] in
-            let result = try await self.service.runAction(action, onOutput: self.makeLogSink())
+            let result = try await self.runAnsweringPasswords(action)
             self.statusMessage = result.succeeded ? "Finished \(action.commandDisplay)" : "Failed \(action.commandDisplay)"
             if result.succeeded {
                 try? await Task.sleep(nanoseconds: 250_000_000)
@@ -86,6 +101,20 @@ public final class PackageStore: ObservableObject {
 
     public func clearLog() {
         logEntries.removeAll()
+    }
+
+    /// Both answers name the request they belong to, so a late answer to a
+    /// prompt that has already gone never lands on the next one.
+    public func submitPassword(_ password: String, for requestID: PasswordRequest.ID) {
+        guard let request = passwordRequest, request.id == requestID else { return }
+        lastAnsweredSudoProcessID = request.sudoProcessID
+        resolvePasswordRequest(with: password)
+    }
+
+    public func cancelPasswordRequest(_ requestID: PasswordRequest.ID) {
+        guard passwordRequest?.id == requestID else { return }
+        appendLog(.status, "Password request cancelled\n")
+        resolvePasswordRequest(with: nil)
     }
 
     public func directDependencies(for package: BrewPackage) -> [PackageNodeID] {
@@ -132,6 +161,49 @@ public final class PackageStore: ObservableObject {
             appendLog(.stderr, "\(error.localizedDescription)\n")
         }
         isRunningCommand = false
+    }
+
+    private func runAnsweringPasswords(_ action: BrewAction) async throws -> CommandResult {
+        // Once brew exits, no prompt from it is left waiting on an answer.
+        isAnsweringPasswords = true
+        defer { endPasswordRequests() }
+        return try await service.runAction(
+            action,
+            onOutput: makeLogSink(),
+            onPasswordRequest: makePasswordHandler(for: action)
+        )
+    }
+
+    private func makePasswordHandler(for action: BrewAction) -> SudoPasswordHandler {
+        { [weak self] prompt in
+            guard let self else { return nil }
+            return await self.requestPassword(prompt, for: action)
+        }
+    }
+
+    private func requestPassword(_ prompt: SudoPasswordPrompt, for action: BrewAction) async -> String? {
+        // sudo asks one question at a time, and only while brew runs;
+        // anything asking meanwhile or afterwards is refused.
+        guard isAnsweringPasswords, passwordContinuation == nil else { return nil }
+        let isRetry = prompt.sudoProcessID != nil && prompt.sudoProcessID == lastAnsweredSudoProcessID
+        appendLog(.status, "Waiting for your administrator password\n")
+        return await withCheckedContinuation { continuation in
+            passwordContinuation = continuation
+            passwordRequest = PasswordRequest(actionTitle: action.title, isRetry: isRetry, sudoProcessID: prompt.sudoProcessID)
+        }
+    }
+
+    private func resolvePasswordRequest(with password: String?) {
+        let continuation = passwordContinuation
+        passwordContinuation = nil
+        passwordRequest = nil
+        continuation?.resume(returning: password)
+    }
+
+    private func endPasswordRequests() {
+        isAnsweringPasswords = false
+        resolvePasswordRequest(with: nil)
+        lastAnsweredSudoProcessID = nil
     }
 
     private func makeLogSink() -> @Sendable (CommandLogEntry.Stream, String) -> Void {
