@@ -3,6 +3,9 @@ import SwiftUI
 
 struct ConfirmationSheet: View {
     let action: BrewAction
+    /// Shown when sudo may be answered by Touch ID or a smartcard before
+    /// Brewery's password sheet is reached.
+    var sudoNotice: String? = nil
     let cancel: () -> Void
     let confirm: () -> Void
 
@@ -28,6 +31,13 @@ struct ConfirmationSheet: View {
             .fixedSize(horizontal: false, vertical: true)
             .background(Color.wellBackground)
             .cornerRadius(6)
+
+            if let sudoNotice {
+                Label(sudoNotice, systemImage: "info.circle")
+                    .font(.callout)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             HStack {
                 Spacer()

@@ -8,3 +8,8 @@ graphify-out/
 .DS_Store
 *.dmg
 *.zip
+# Sparkle EdDSA signing key — the private half must never be committed; anyone
+# with it can sign a malicious update.
+Keys/
+# Offscreen visual-verification captures (DEBUG --capture-visual harness).
+.visual-capture/

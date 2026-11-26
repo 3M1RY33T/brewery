@@ -14,6 +14,19 @@ public enum PackageKind: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// One package a `BrewAction` names, for tracking it while the command runs.
+public struct BrewTarget: Identifiable, Equatable {
+    public let name: String
+    public let kind: PackageKind
+
+    public init(name: String, kind: PackageKind) {
+        self.name = name
+        self.kind = kind
+    }
+
+    public var id: String { PackageNodeID(kind: kind, name: name).id }
+}
+
 public enum BrewAction: Identifiable, Equatable {
     case update
     case upgrade(name: String, kind: PackageKind)
@@ -40,6 +53,19 @@ public enum BrewAction: Identifiable, Equatable {
     }
 
     public var isMutating: Bool { true }
+
+    /// The packages this action moves. `update` and `cleanup` touch the whole
+    /// installation rather than named packages, so they carry none.
+    public var targets: [BrewTarget] {
+        switch self {
+        case .update, .cleanup:
+            return []
+        case .upgrade(let name, let kind), .install(let name, let kind), .uninstall(let name, let kind):
+            return [BrewTarget(name: name, kind: kind)]
+        case .upgradeAll(let names, let kind):
+            return names.map { BrewTarget(name: $0, kind: kind) }
+        }
+    }
 
     public var arguments: [String] {
         switch self {

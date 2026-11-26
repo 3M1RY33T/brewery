@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Sparkle.framework is ad-hoc signed with no Team ID while Brewery runs
+         with the hardened runtime. Library validation rejects any library that
+         is not an Apple platform binary unless this is disabled, so without it
+         the app aborts at launch: "different Team IDs". Sparkle's own docs
+         require this entitlement for hardened-runtime apps. -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>

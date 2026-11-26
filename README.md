@@ -17,6 +17,12 @@ Download the latest release from [GitHub Releases](https://github.com/3M1RY33T/b
 
 Brewery is not signed or notarized yet. On first launch macOS will refuse to open it: open it from Finder with Control-click > Open, and confirm once.
 
+## Updates
+
+Brewery updates itself with [Sparkle](https://sparkle-project.org/). On launch it checks for a new version in the background (turn this off from the Diagnostics page), and when one is available a dismissible card slides in from the bottom-right corner with **Install** and **Download page** actions. Release notes for the available version appear in the **Updates** block on the Diagnostics page, next to a **Check for Updates** button and the launch-check toggle.
+
+Install hands the actual download and relaunch to Sparkle's standard window; Brewery never downloads or installs an update without asking first.
+
 ## Browse the whole catalog
 
 Search every official formula and cask, or scroll the shelves: a carousel of the most installed packages, category tiles for AI, developer tools, terminal, security, networking, data, media, fonts, design, productivity, communication, libraries and utilities, and Top Charts ranked by Homebrew's install analytics for the last year. Casks show the icon of the app they install; formulae and fonts get a glyph. Pin anything from any shelf and it collects under the Pinned button in the header. The catalog is cached locally, so it still opens when a network refresh fails.
@@ -68,6 +74,10 @@ Swift 5.9 or newer is only needed when building from source.
 - Show direct dependencies and dependents in the package detail pane, beside the content or beneath it in narrow windows.
 - Confirm before running mutating commands: install, upgrade, uninstall and cleanup.
 - Stream command output into the log on the Diagnostics page.
+- Follow a running install or upgrade in a Downloads popover beside Pinned: live per-package phases and percentages, with anything started meanwhile waiting in a visible queue.
+- Show packages that are installing in their own Library category — a dimmed cask card or formula row carrying a live progress bar — so an install is visible without opening the popover.
+- Fill Browse and Library with shimmering skeleton placeholders while the catalog and installed inventory load at launch, instead of an empty window.
+- Update itself in-app with Sparkle: a background launch check (toggleable) and a floating update card, with release notes on the Diagnostics page.
 - Show diagnostics from `brew --version`, `brew config` and `brew doctor`.
 
 ## Build from source
@@ -93,6 +103,34 @@ The build script also generates `BreweryIcon.icns` from `brewery-logo.png` for t
 ```sh
 swift test
 ```
+
+## Releasing
+
+Updates are signed with an EdDSA (Ed25519) key so Sparkle can verify them. The
+private key lives in `Keys/` (gitignored — never commit it); its public half is
+baked into the app as `SUPublicEDKey`. Generate a keypair once:
+
+```sh
+Scripts/generate-keys.sh
+```
+
+then put the printed key into `SU_PUBLIC_ED_KEY` in `Scripts/build-app.sh`.
+
+To cut a release, bump the version and build/sign/regenerate the appcast:
+
+```sh
+Scripts/make-release.sh 1.3.0
+```
+
+This builds the app, packages `Brewery-v1.3.0-macOS.zip` and `.dmg` under
+`.build/release/`, signs the zip with the EdDSA key, and rewrites `appcast.xml`
+(the build number — `CFBundleVersion` — is bumped by one automatically). Upload
+the artifacts to a matching GitHub release, then commit `appcast.xml` and
+`VERSION`.
+
+The appcast is served from
+`https://raw.githubusercontent.com/3M1RY33T/brewery/main/appcast.xml`, which
+the app reads via its `SUFeedURL`.
 
 ## Credits
 

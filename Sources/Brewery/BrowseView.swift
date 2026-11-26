@@ -13,6 +13,8 @@ struct BrowseView: View {
     @Binding var selectedPackage: CatalogPackage?
     let onAction: (BrewAction) -> Void
     let onSelectInstalled: (PackageNodeID) -> Void
+    /// Switches to the Diagnostics log from the downloads popover.
+    let showLog: () -> Void
 
     @EnvironmentObject private var pinnedStore: PinnedStore
 
@@ -47,10 +49,14 @@ struct BrowseView: View {
                     }
 
                     ScrollView {
-                        if catalogStore.isSearching {
+                        if !catalogStore.hasLoadedOnce {
+                            BrowseSkeletonView()
+                        } else if catalogStore.isSearching {
                             searchResults
                         } else if isShowingPinned {
                             pinnedResults
+                        } else if catalogStore.sections.isEmpty {
+                            catalogUnavailable
                         } else {
                             shelves(proxy: proxy)
                         }
@@ -123,6 +129,8 @@ struct BrowseView: View {
             .buttonStyle(.bordered)
             .tint(isShowingPinned ? .accentColor : nil)
             .help(isShowingPinned ? "Back to the catalog" : "Show the packages you have pinned")
+
+            DownloadsButton(catalogStore: catalogStore, showLog: showLog)
 
             Button {
                 Task { await catalogStore.load(installedPackages: installedPackages, forceRefresh: true) }
@@ -215,6 +223,31 @@ struct BrowseView: View {
             }
         }
         .padding(.bottom, 24)
+    }
+
+    /// The load finished without a catalog and without a cache. The header
+    /// still carries the reason and the retry, so this is the page's own
+    /// state rather than an empty shelf.
+    private var catalogUnavailable: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "square.grid.2x2")
+                .font(.largeTitle)
+                .foregroundColor(.secondary)
+            Text("Catalog unavailable")
+                .font(.headline)
+            Text(catalogStore.statusMessage)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            Button {
+                Task { await catalogStore.load(installedPackages: installedPackages, forceRefresh: true) }
+            } label: {
+                Label("Retry", systemImage: "arrow.clockwise")
+            }
+            .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 32)
+        .padding(.top, 80)
     }
 
     @ViewBuilder

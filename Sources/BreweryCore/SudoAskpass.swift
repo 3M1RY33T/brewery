@@ -35,10 +35,15 @@ public typealias SudoPasswordHandler = @Sendable (SudoPasswordPrompt) async -> S
 /// sudo's prompt over a Unix socket in a private directory and prints the
 /// reply. A prompt nobody answers leaves the output empty, which sudo takes
 /// as a cancelled prompt, so the command fails instead of hanging.
+///
+/// Only processes Brewery started, such as brew's sudo, are answered. Any
+/// other program running as the user could otherwise connect while a
+/// command runs and be handed the password.
 public final class SudoAskpass {
     public let helperURL: URL
     let directoryURL: URL
 
+    private let trustedAncestor: pid_t
     private let listener: Int32
     private let source: DispatchSourceRead
     private let lock = NSLock()
@@ -46,7 +51,12 @@ public final class SudoAskpass {
 
     static let directoryPrefix = "brewery-askpass."
 
-    public init(parentDirectory: URL = FileManager.default.temporaryDirectory) throws {
+    /// `trustedAncestor` is the process whose descendants may ask: Brewery.
+    public init(
+        parentDirectory: URL = FileManager.default.temporaryDirectory,
+        trustedAncestor: pid_t = getpid()
+    ) throws {
+        self.trustedAncestor = trustedAncestor
         Self.removeAbandonedDirectories(in: parentDirectory)
         directoryURL = try Self.makePrivateDirectory(in: parentDirectory)
         helperURL = directoryURL.appendingPathComponent("askpass")
@@ -125,7 +135,10 @@ public final class SudoAskpass {
         var timeout = timeval(tv_sec: 5, tv_usec: 0)
         setsockopt(connection, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
 
-        guard let prompt = Self.readPrompt(from: connection), let handler = currentHandler() else {
+        guard Self.peer(of: connection, descendsFrom: trustedAncestor),
+              let prompt = Self.readPrompt(from: connection),
+              let handler = currentHandler()
+        else {
             close(connection)
             return
         }
@@ -136,6 +149,33 @@ public final class SudoAskpass {
             }
             close(connection)
         }
+    }
+
+    /// The kernel records which process connected, and a process cannot
+    /// choose its parent, so this holds for anything not started by
+    /// `ancestor`: it never reaches it walking up its parents. A process
+    /// orphaned on the way is refused too.
+    static func peer(of connection: Int32, descendsFrom ancestor: pid_t) -> Bool {
+        var current: pid_t = 0
+        var length = socklen_t(MemoryLayout<pid_t>.size)
+        guard getsockopt(connection, SOL_LOCAL, LOCAL_PEERPID, &current, &length) == 0 else { return false }
+
+        // sudo's helper sits a handful of levels below brew; the cap only
+        // guards against a loop.
+        for _ in 0..<64 {
+            if current == ancestor { return true }
+            guard current > 1, let parent = parentProcessID(of: current) else { return false }
+            current = parent
+        }
+        return false
+    }
+
+    private static func parentProcessID(of pid: pid_t) -> pid_t? {
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+        guard sysctl(&mib, u_int(mib.count), &info, &size, nil, 0) == 0, size > 0 else { return nil }
+        return info.kp_eproc.e_ppid
     }
 
     private static func readPrompt(from connection: Int32) -> SudoPasswordPrompt? {

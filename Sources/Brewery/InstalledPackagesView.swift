@@ -7,24 +7,63 @@ import SwiftUI
 /// redundant. Every card and row can upgrade or uninstall.
 struct InstalledPackagesView: View {
     @EnvironmentObject private var store: PackageStore
+    /// Only for the icons and descriptions of packages that are downloading
+    /// and not installed yet. Nil outside the Library, which falls back to
+    /// the kind glyph.
+    var catalogStore: CatalogStore?
     let onAction: (BrewAction) -> Void
     /// What to say when the list is empty, with and without a search.
     let emptyTitle: String
     let emptySearchTitle: (String) -> String
     let emptySymbol: String
 
+    @Environment(\.isRenderHarness) private var isRenderHarness
     @State private var isShowingAllCasks = false
     /// An action requested from inside the popup. The confirmation is a
     /// sheet on the same window, and macOS will not stack one sheet on
     /// another, so it waits until the popup has gone.
     @State private var queuedAction: BrewAction?
 
-    // Anything needing attention leads.
-    private var casks: [BrewPackage] { store.filteredPackages.filter { $0.kind == .cask }.outdatedFirst() }
-    private var formulae: [BrewPackage] { store.filteredPackages.filter { $0.kind == .formula }.outdatedFirst() }
+    // Anything needing attention leads. A package that is being upgraded is
+    // drawn once, as its in-progress entry, so the same cask never appears
+    // twice in the row.
+    private var casks: [BrewPackage] {
+        let busy = Set(inProgressCasks.map(\.name))
+        return store.filteredPackages
+            .filter { $0.kind == .cask && !busy.contains($0.name) }
+            .outdatedFirst()
+    }
 
-    static func library(onAction: @escaping (BrewAction) -> Void) -> InstalledPackagesView {
+    private var formulae: [BrewPackage] {
+        let busy = Set(inProgressFormulae.map(\.name))
+        return store.filteredPackages
+            .filter { $0.kind == .formula && !busy.contains($0.name) }
+            .outdatedFirst()
+    }
+
+    /// Packages on their way in, shown in their own category the way they will
+    /// appear once installed: dimmed, with their progress instead of controls.
+    /// Settled entries drop out here — the inventory refresh replaces them
+    /// with the real package. Items with no kind (`brew update`, `brew
+    /// cleanup`) have no category to sit in and stay in the popover.
+    private var inProgress: [DownloadItem] {
+        guard let session = store.downloads else { return [] }
+        return session.items.filter { item in
+            guard !item.isSettled, item.kind != nil else { return false }
+            guard !store.searchText.isEmpty else { return true }
+            return item.name.localizedCaseInsensitiveContains(store.searchText)
+        }
+    }
+
+    private var inProgressCasks: [DownloadItem] { inProgress.filter { $0.kind == .cask } }
+    private var inProgressFormulae: [DownloadItem] { inProgress.filter { $0.kind == .formula } }
+
+    static func library(
+        catalogStore: CatalogStore? = nil,
+        onAction: @escaping (BrewAction) -> Void
+    ) -> InstalledPackagesView {
         InstalledPackagesView(
+            catalogStore: catalogStore,
             onAction: onAction,
             emptyTitle: "Nothing installed yet",
             emptySearchTitle: { "No installed packages match \"\($0)\"" },
@@ -34,55 +73,10 @@ struct InstalledPackagesView: View {
 
     var body: some View {
         Group {
-            if store.filteredPackages.isEmpty {
-                emptyState
+            if !store.hasLoadedInventory && store.packages.isEmpty {
+                LibrarySkeletonView()
             } else {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 28) {
-                        if !casks.isEmpty {
-                            section(title: "Casks", systemImage: "macwindow", count: casks.count, accessory: {
-                                HStack(spacing: 14) {
-                                    Button {
-                                        isShowingAllCasks = true
-                                    } label: {
-                                        Label("Show All", systemImage: "square.grid.2x2")
-                                            .font(.callout.weight(.medium))
-                                    }
-                                    .buttonStyle(.plain)
-                                    .foregroundColor(.primary)
-
-                                    upgradeAllButton(for: casks, kind: .cask)
-                                }
-                            }) {
-                                caskRow
-                            }
-                        }
-
-                        if !formulae.isEmpty {
-                            section(title: "Formulae", systemImage: "terminal", count: formulae.count, accessory: {
-                                upgradeAllButton(for: formulae, kind: .formula)
-                            }) {
-                                VStack(spacing: 0) {
-                                    ForEach(Array(formulae.enumerated()), id: \.element.id) { index, package in
-                                        if index > 0 { Divider() }
-                                        InstalledFormulaRow(
-                                            package: package,
-                                            isSelected: store.selectedPackageID == package.id,
-                                            dependencyCount: store.directDependencies(for: package).count,
-                                            dependentCount: store.directDependents(for: package).count,
-                                            select: { store.selectedPackageID = package.id },
-                                            action: onAction
-                                        )
-                                    }
-                                }
-                                .background(Color.cardBackground)
-                                .cornerRadius(8)
-                                .cardEdge(cornerRadius: 8)
-                            }
-                        }
-                    }
-                    .padding(16)
-                }
+                list
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -94,10 +88,106 @@ struct InstalledPackagesView: View {
         }
     }
 
+    @ViewBuilder
+    private var list: some View {
+        if isRenderHarness {
+            // ImageRenderer cannot lay out a ScrollView, so the offscreen
+            // verification harness renders the list in a plain container.
+            listContent
+        } else {
+            ScrollView {
+                listContent
+            }
+        }
+    }
+
+    /// The list's content without the scrolling wrapper, so the offscreen
+    /// verification harness can lay it out (ImageRenderer cannot lay out a
+    /// ScrollView). The live window uses `list`, which wraps this in a
+    /// ScrollView.
+    var listContent: some View {
+        LazyVStack(alignment: .leading, spacing: 28) {
+                if !casks.isEmpty || !inProgressCasks.isEmpty {
+                    section(
+                        title: "Casks",
+                        systemImage: "macwindow",
+                        count: casks.count + inProgressCasks.count,
+                        accessory: {
+                            HStack(spacing: 14) {
+                                // The sheet lists installed casks only, so it is
+                                // pointless while every card on screen is still
+                                // downloading.
+                                if !casks.isEmpty {
+                                    Button {
+                                        isShowingAllCasks = true
+                                    } label: {
+                                        Label("Show All", systemImage: "square.grid.2x2")
+                                            .font(.callout.weight(.medium))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .foregroundColor(.primary)
+                                }
+
+                                upgradeAllButton(for: casks, kind: .cask)
+                            }
+                        }
+                    ) {
+                        caskRow
+                    }
+                }
+
+                if !formulae.isEmpty || !inProgressFormulae.isEmpty {
+                    section(
+                        title: "Formulae",
+                        systemImage: "terminal",
+                        count: formulae.count + inProgressFormulae.count,
+                        accessory: {
+                            upgradeAllButton(for: formulae, kind: .formula)
+                        }
+                    ) {
+                        VStack(spacing: 0) {
+                            ForEach(Array(inProgressFormulae.enumerated()), id: \.element.id) { index, item in
+                                if index > 0 { Divider() }
+                                InProgressFormulaRow(item: item, catalogStore: catalogStore)
+                            }
+                            ForEach(Array(formulae.enumerated()), id: \.element.id) { index, package in
+                                if index > 0 || !inProgressFormulae.isEmpty { Divider() }
+                                InstalledFormulaRow(
+                                    package: package,
+                                    isSelected: store.selectedPackageID == package.id,
+                                    dependencyCount: store.directDependencies(for: package).count,
+                                    dependentCount: store.directDependents(for: package).count,
+                                    select: { store.selectedPackageID = package.id },
+                                    action: onAction
+                                )
+                            }
+                        }
+                        .background(Color.cardBackground)
+                        .cornerRadius(8)
+                        .cardEdge(cornerRadius: 8)
+                    }
+                }
+
+            if store.filteredPackages.isEmpty && inProgress.isEmpty {
+                emptyState
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 60)
+            }
+        }
+        .padding(16)
+    }
+
     /// One row of cards, scrolled sideways. The popup has the full grid.
+    /// Anything downloading leads the row, so a just-requested cask is the
+    /// first card rather than off the right edge.
     private var caskRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: 12) {
+                ForEach(inProgressCasks) { item in
+                    InProgressCaskCard(item: item, catalogStore: catalogStore)
+                        .frame(width: 240)
+                }
+
                 ForEach(casks) { package in
                     InstalledCaskCard(
                         package: package,
@@ -175,7 +265,7 @@ struct InstalledPackagesView: View {
             Text(store.searchText.isEmpty ? emptyTitle : emptySearchTitle(store.searchText))
                 .foregroundColor(.secondary)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
     }
 }
 

@@ -45,12 +45,23 @@ struct ContentView: View {
         .task {
             await store.refresh()
             await catalogStore.load(installedPackages: store.packages)
+
+            #if DEBUG
+            // Verification aid: with `--demo-autorun`, start one install and
+            // then queue a second, so the queue can be watched without clicking
+            // Install through a mock catalog.
+            if CommandLine.arguments.contains("--demo-autorun") {
+                Task { await store.perform(.install(name: "warp", kind: .cask)) }
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                await store.perform(.install(name: "htop", kind: .formula))
+            }
+            #endif
         }
         .onChange(of: store.packages) { packages in
             catalogStore.mergeInstalledState(packages)
         }
         .sheet(item: $pendingAction) { action in
-            ConfirmationSheet(action: action) {
+            ConfirmationSheet(action: action, sudoNotice: store.sudoAuthentication.preemptionNotice) {
                 pendingAction = nil
             } confirm: {
                 pendingAction = nil
@@ -101,6 +112,9 @@ struct ContentView: View {
                 }
             }
         }
+        .overlay(alignment: .bottomTrailing) {
+            UpdateCard()
+        }
         .onAppear {
             detailPaneWidth = clampedDetailPaneWidth
         }
@@ -109,8 +123,8 @@ struct ContentView: View {
         .sheet(item: passwordRequest) { request in
             PasswordPromptSheet(request: request) {
                 store.cancelPasswordRequest(request.id)
-            } submit: { password in
-                store.submitPassword(password, for: request.id)
+            } submit: { password, rememberWithTouchID in
+                store.submitPassword(password, rememberWithTouchID: rememberWithTouchID, for: request.id)
             }
         }
         .onChange(of: store.passwordRequest) { request in
@@ -167,17 +181,26 @@ struct ContentView: View {
             }
 
             if store.filter == .browse {
-                BrowseView(catalogStore: catalogStore, installedPackages: store.packages, selectedPackage: $selectedCatalogPackage) { action in
-                    pendingAction = action
-                } onSelectInstalled: { node in
-                    store.selectPackage(node)
-                }
+                BrowseView(
+                    catalogStore: catalogStore,
+                    installedPackages: store.packages,
+                    selectedPackage: $selectedCatalogPackage,
+                    onAction: { action in
+                        pendingAction = action
+                    },
+                    onSelectInstalled: { node in
+                        store.selectPackage(node)
+                    },
+                    showLog: {
+                        store.filter = .diagnostics
+                    }
+                )
             } else if store.filter == .diagnostics {
                 DiagnosticsView { action in
                     pendingAction = action
                 }
             } else {
-                InstalledPackagesView.library { action in
+                InstalledPackagesView.library(catalogStore: catalogStore) { action in
                     pendingAction = action
                 }
             }
@@ -232,6 +255,7 @@ struct ContentView: View {
     private func clampedDetailPaneWidth(_ width: Double) -> Double {
         min(max(width, minimumDetailPaneWidth), maximumDetailPaneWidth)
     }
+
 }
 
 private struct DetailPaneResizeHandle: View {

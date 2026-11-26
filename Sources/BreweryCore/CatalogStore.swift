@@ -40,7 +40,10 @@ public final class CatalogStore: ObservableObject {
     /// The browse shelves, rebuilt only when the catalog itself changes.
     @Published public private(set) var sections: [CatalogSection] = []
     @Published public private(set) var isLoading = false
-    @Published public private(set) var statusMessage = "Catalog not loaded"
+    /// True once a load has finished, whether it found a catalog or not. The
+    /// page shows skeletons only until then.
+    @Published public private(set) var hasLoadedOnce = false
+    @Published public private(set) var statusMessage = "Loading catalog…"
     @Published public var searchText = ""
 
     private let fetcher: CatalogFetching
@@ -80,7 +83,10 @@ public final class CatalogStore: ObservableObject {
     public func load(installedPackages: [BrewPackage], forceRefresh: Bool = false) async {
         guard !isLoading else { return }
         isLoading = true
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            hasLoadedOnce = true
+        }
 
         do {
             let snapshot = try forceRefresh ? await fetchCatalog() : await loadCachedOrFetch()
